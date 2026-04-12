@@ -20,21 +20,22 @@
 
       <!-- Stats row -->
       <div class="stats-row fade-up fade-up-3">
-        <div class="stat">
-          <span class="stat-val display">20</span>
-          <span class="stat-label mono">Agents</span>
-        </div>
-        <div class="stat-sep"></div>
-        <div class="stat">
-          <span class="stat-val display">3</span>
-          <span class="stat-label mono">Debate Rounds</span>
-        </div>
-        <div class="stat-sep"></div>
-        <div class="stat">
-          <span class="stat-val display">1</span>
-          <span class="stat-label mono">God's Eye View</span>
-        </div>
-      </div>
+  <div class="hero-stat-card">
+    <div class="hsc-icon">◎</div>
+    <div class="hsc-title mono">Simulate</div>
+    <div class="hsc-desc">Real agents with distinct personas debate your topic across structured rounds</div>
+  </div>
+  <div class="hero-stat-card">
+    <div class="hsc-icon">⟳</div>
+    <div class="hsc-title mono">Evolve</div>
+    <div class="hsc-desc">Agents shift opinions, challenge each other, and form emergent consensus</div>
+  </div>
+  <div class="hero-stat-card">
+    <div class="hsc-icon">◈</div>
+    <div class="hsc-title mono">Predict</div>
+    <div class="hsc-desc">God's Eye View reveals who shifted, what argued mattered, and where opinion heads</div>
+  </div>
+</div>
     </section>
 
     <!-- Launch Form -->
@@ -164,6 +165,14 @@ async function launch() {
 </script>
 
 <style scoped>
+.stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; }
+.hero-stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:20px 16px; text-align:left; transition:border-color var(--transition); }
+.hero-stat-card:hover { border-color:rgba(200,255,87,0.2); }
+.hsc-icon  { font-size:18px; color:var(--accent); margin-bottom:10px; display:block; }
+.hsc-title { font-size:10px; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); margin-bottom:8px; font-family:var(--mono); }
+.hsc-desc  { font-size:12px; color:var(--text-muted); line-height:1.6; }
+@media (max-width:640px) { .stats-row { grid-template-columns:1fr; } }
+
 .home {
   min-height: calc(100vh - 56px);
   display: flex;
