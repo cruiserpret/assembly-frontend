@@ -13,6 +13,18 @@
 
     <div v-else-if="report" class="report-wrap">
 
+    <div class="share-banner">
+  <span class="mono" style="font-size:10px; color:var(--text-muted);">
+    ⤴ Share this simulation with your team
+  </span>
+  <div class="share-url-row">
+    <span class="share-url mono">{{ shareUrl }}</span>
+    <button class="btn btn-ghost" style="font-size:10px; padding:5px 12px; flex-shrink:0;" @click="shareReport">
+      {{ copied ? '✓ Copied!' : 'Copy Link' }}
+    </button>
+  </div>
+</div>
+
       <!-- Masthead -->
       <header class="masthead fade-up">
         <div class="masthead-eyebrow mono">
@@ -155,14 +167,20 @@
 
           <!-- Actions -->
           <div class="card fade-up fade-up-1" style="padding:18px;">
-            <div class="section-label mono" style="margin-bottom:12px;">Actions</div>
-            <router-link :to="`/simulation/${id}`" class="btn btn-ghost" style="width:100%; justify-content:center; margin-bottom:8px;">
-              ← View Debate
-            </router-link>
-            <router-link to="/" class="btn btn-primary" style="width:100%; justify-content:center;">
-              + New Simulation
-            </router-link>
-          </div>
+  <div class="section-label mono" style="margin-bottom:12px;">Actions</div>
+  <router-link :to="`/simulation/${id}`" class="btn btn-ghost" style="width:100%; justify-content:center; margin-bottom:8px;">
+    ← View Debate
+  </router-link>
+  <button class="btn btn-ghost" style="width:100%; justify-content:center; margin-bottom:8px;" @click="shareReport">
+    {{ copied ? '✓ Link Copied!' : '⤴ Share Report' }}
+  </button>
+  <button class="btn btn-ghost" style="width:100%; justify-content:center; margin-bottom:8px;" @click="exportPDF">
+    ↓ Export PDF
+  </button>
+  <router-link to="/" class="btn btn-primary" style="width:100%; justify-content:center;">
+    + New Simulation
+  </router-link>
+</div>
 
         </aside>
       </div>
@@ -171,7 +189,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { assembly } from '../api/assembly.js'
 
 const props = defineProps({ id: String })
@@ -180,6 +198,19 @@ const report      = ref(null)
 const loading     = ref(true)
 const error       = ref('')
 const journeyOpen = ref(false)
+const copied   = ref(false)
+const shareUrl = computed(() => window.location.href)
+
+function shareReport() {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    copied.value = true
+    setTimeout(() => copied.value = false, 2500)
+  })
+}
+
+function exportPDF() {
+  window.print()
+}
 
 onMounted(async () => {
   try {
@@ -383,5 +414,46 @@ onMounted(async () => {
   .consensus-block { grid-template-columns: 1fr; }
   .consensus-summary { border-left: none; padding-left: 0; border-top: 1px solid var(--border); padding-top: 16px; }
   .agent-summary-row { grid-template-columns: 1fr; }
+}
+.share-banner {
+  background: var(--surface);
+  border: 1px solid rgba(200,255,87,0.2);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.share-url-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+}
+.share-url {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media print {
+  .share-banner,
+  .report-sidebar .card:last-child { display: none; }
+  body { background: white !important; color: black !important; }
+  .report-page { padding: 20px !important; max-width: 100% !important; }
+  .report-body { grid-template-columns: 1fr !important; }
+  .report-sidebar { display: none; }
+  .section-label { color: #666 !important; border-color: #ddd !important; }
+  .summary-text, .trajectory-text, .as-moment { color: #333 !important; }
+  .masthead-title { color: black !important; }
+  .argument-card, .agent-summary-row { border-color: #ddd !important; background: #f9f9f9 !important; }
+  nav { display: none !important; }
 }
 </style>
