@@ -136,91 +136,6 @@
       <p class="demo-cta mono">↑ This is what Assembly produces for every topic you run</p>
     </section>
 
-    <!-- ── GOD'S EYE VIEW PREVIEW ── -->
-    <section class="gev-section fade-up">
-      <div class="gev-header">
-        <div class="gev-eyebrow mono">
-          <span style="color:var(--accent);">◈</span>
-          The deliverable
-        </div>
-        <h2 class="gev-title display">GOD'S EYE VIEW</h2>
-        <p class="gev-desc">
-          After every simulation, Assembly produces a synthesis report —
-          who shifted, what argument was decisive, and where public opinion is actually headed.
-          This is what you're buying.
-        </p>
-      </div>
-
-      <div class="gev-window">
-        <div class="gev-content">
-          <div class="gev-topic mono">Topic: "Should TikTok be banned in the USA?"</div>
-
-          <div class="gev-summary-block">
-            <div class="gev-block-label mono">Executive Summary</div>
-            <p class="gev-summary-text">
-              The simulation revealed strong convergence toward a conditional ban over 3 rounds.
-              National security arguments proved decisive — 4 of 6 agents revised their position
-              after Elena Vasquez's intelligence-sharing evidence. The holdouts cited free speech
-              concerns but acknowledged they were in the minority.
-            </p>
-          </div>
-
-          <div class="gev-trajectory-block">
-            <div class="gev-block-label mono">Predicted Trajectory</div>
-            <div class="gev-trajectory">
-              <span class="gev-arrow">⟶</span>
-              <span>Public opinion converges toward a targeted device ban within 12 months,
-              with bipartisan support emerging around national security framing rather than
-              censorship concerns.</span>
-            </div>
-          </div>
-
-          <div class="gev-decisive">
-            <div class="gev-block-label mono">Decisive Argument</div>
-            <div class="gev-arg-card">
-              <div class="gev-arg-who">
-                <div class="sm-avatar avatar-for">E</div>
-                <span class="mono" style="font-size:11px;">Elena Vasquez</span>
-                <span class="tag tag-for" style="font-size:9px;padding:2px 6px;">for</span>
-                <span class="mono muted" style="font-size:10px;margin-left:auto;">Influenced 4 agents</span>
-              </div>
-              <p class="gev-arg-text">
-                "15 countries have already restricted TikTok based on classified intelligence
-                briefings the public hasn't seen. The US is late to act, not early."
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="gev-stats">
-          <div class="gev-stat-header mono">Outcome Stats</div>
-          <div class="gev-big-stat">
-            <span class="gev-big-num display accent">4</span>
-            <span class="mono muted" style="font-size:10px;">agents shifted</span>
-          </div>
-          <div class="gev-shift-bar-wrap">
-            <div class="gev-shift-bar">
-              <div class="gev-shift-fill" style="width:67%"></div>
-            </div>
-            <span class="mono muted" style="font-size:10px;margin-top:4px;">67% shift rate</span>
-          </div>
-          <div class="divider"></div>
-          <div class="gev-agents">
-            <div class="gev-block-label mono">Agent Journey</div>
-            <div class="gev-agent-row" v-for="a in gevAgents" :key="a.name">
-              <div class="sm-avatar" :class="`avatar-${a.stance}`">{{ a.name.charAt(0) }}</div>
-              <span class="gev-agent-name">{{ a.name }}</span>
-              <span class="gev-badge" :class="a.shifted ? 'shifted-badge' : 'held-badge'">
-                {{ a.shifted ? '↻' : '—' }}
-              </span>
-            </div>
-          </div>
-          <div class="divider"></div>
-          <div class="gev-cta-note mono">Every simulation produces this report automatically.</div>
-        </div>
-      </div>
-    </section>
-
     <!-- ── LAUNCH FORM ── -->
     <section class="launch-section fade-up fade-up-4">
       <div class="launch-card">
@@ -360,15 +275,6 @@ const form    = ref({ topic: '', num_agents: 20, num_rounds: 3 })
 const loading = ref(false)
 const error   = ref('')
 
-const features = [
-  { label: 'Structured debate engine',  color: 'var(--accent)' },
-  { label: 'Evolving agent personas',   color: 'var(--for)' },
-  { label: "God's Eye View report",     color: '#A78BFA' },
-  { label: 'Live event injection',      color: 'var(--against)' },
-  { label: 'Sentiment trajectory',      color: '#60A5FA' },
-  { label: 'Simulation branching',      color: '#FBBF24' },
-]
-
 const gevAgents = [
   { name:'Sarah',  stance:'for',     shifted:false },
   { name:'Marcus', stance:'neutral', shifted:true  },
@@ -423,12 +329,12 @@ const demoEdges = [
   { id:'e6', x1:170, y1:150, x2:230, y2:130, shifted:true  },
 ]
 const allStatements = [
-  { id:1, name:'Sarah',  stance:'for',     shifted:false, text:"TikTok's data collection practices present a clear national security risk that cannot be ignored." },
-  { id:2, name:'Marcus', stance:'against',  shifted:false, text:"A ban sets a dangerous precedent for government censorship of private platforms." },
-  { id:3, name:'Elena',  stance:'for',     shifted:false, text:"15 countries have already restricted TikTok. The US is late to act on documented threats." },
-  { id:4, name:'James',  stance:'neutral',  shifted:false, text:"I understand both sides. Perhaps mandatory data localization is a middle ground." },
-  { id:5, name:'Priya',  stance:'neutral',  shifted:true,  text:"Elena's evidence is compelling. I'm revising toward conditional support for a ban." },
-  { id:6, name:'Tom',    stance:'for',     shifted:true,  text:"After this debate, a targeted ban on government devices is the minimum necessary response." },
+  { id:1, name:'Sarah',  stance:'for',    shifted:false, text:"TikTok's data collection practices present a clear national security risk that cannot be ignored." },
+  { id:2, name:'Marcus', stance:'against', shifted:false, text:"A ban sets a dangerous precedent for government censorship of private platforms." },
+  { id:3, name:'Elena',  stance:'for',    shifted:false, text:"15 countries have already restricted TikTok. The US is late to act on documented threats." },
+  { id:4, name:'James',  stance:'neutral', shifted:false, text:"I understand both sides. Perhaps mandatory data localization is a middle ground." },
+  { id:5, name:'Priya',  stance:'neutral', shifted:true,  text:"Elena's evidence is compelling. I'm revising toward conditional support for a ban." },
+  { id:6, name:'Tom',    stance:'for',    shifted:true,  text:"After this debate, a targeted ban on government devices is the minimum necessary response." },
 ]
 
 let demoTimer = null
@@ -511,10 +417,10 @@ onUnmounted(() => clearInterval(demoTimer))
 .demo-stmt.stmt-for     { border-left: 2px solid rgba(62,232,160,0.4); }
 .demo-stmt.stmt-against { border-left: 2px solid rgba(255,77,109,0.4); }
 .demo-stmt.stmt-neutral { border-left: 2px solid rgba(122,139,166,0.2); }
-.demo-stmt-who { display:flex; align-items:center; gap:5px; margin-bottom:5px; }
+.demo-stmt-who { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
 .demo-stmt-text { font-size: 11px; color: var(--text-muted); line-height: 1.5; }
 .demo-report { border-left: 1px solid var(--border); padding: 14px 12px; display: flex; flex-direction: column; gap: 10px; background: var(--bg-2); }
-.demo-report-stat { display:flex; flex-direction:column; gap:2px; }
+.demo-report-stat { display: flex; flex-direction: column; gap: 2px; }
 .demo-big-num { font-size: 40px; line-height: 1; }
 .demo-shift-bar { height: 3px; background: var(--surface-2); border-radius: 2px; overflow: hidden; }
 .demo-shift-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 1s ease; }
@@ -524,8 +430,23 @@ onUnmounted(() => clearInterval(demoTimer))
 .stmt-fade-enter-active { transition: all 0.5s cubic-bezier(0.16,1,0.3,1); }
 .stmt-fade-enter-from   { opacity: 0; transform: translateY(10px); }
 
+/* Launch */
+.launch-section { width: 100%; max-width: 620px; margin-bottom: 48px; }
+.launch-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px 32px; }
+.form-group { margin-bottom: 24px; }
+.form-label { display: flex; justify-content: space-between; align-items: center; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.range { -webkit-appearance: none; width: 100%; height: 2px; background: var(--surface-2); border-radius: 2px; outline: none; cursor: pointer; margin-bottom: 6px; }
+.range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 10px rgba(200,255,87,0.5); transition: transform var(--transition); }
+.range::-webkit-slider-thumb:hover { transform: scale(1.2); }
+.range-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); }
+.error-msg { font-size: 12px; color: var(--against); margin-bottom: 16px; padding: 10px 14px; background: rgba(255,77,109,0.08); border: 1px solid rgba(255,77,109,0.2); border-radius: var(--radius); }
+.launch-btn { width: 100%; justify-content: center; padding: 14px; font-size: 12px; margin-bottom: 12px; }
+.launch-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+.launch-hint { text-align: center; font-size: 10px; color: var(--text-dim); letter-spacing: 0.03em; }
+
 /* God's Eye View */
-.gev-section { width: 100%; max-width: 900px; margin-bottom: 48px; }
+.gev-section { width: 100%; max-width: 900px; margin-bottom: 60px; }
 .gev-header { text-align: center; margin-bottom: 24px; }
 .gev-eyebrow { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--mono); }
 .gev-title { font-size: clamp(36px, 6vw, 64px); color: var(--text); line-height: 1; margin-bottom: 14px; }
@@ -555,24 +476,6 @@ onUnmounted(() => clearInterval(demoTimer))
 .held-badge    { background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border); }
 .gev-cta-note { font-size: 9px; color: var(--text-dim); letter-spacing: 0.04em; line-height: 1.5; font-family: var(--mono); }
 
-/* Launch */
-.launch-section { width: 100%; max-width: 620px; }
-.launch-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px 32px; margin-bottom: 20px; }
-.form-group { margin-bottom: 24px; }
-.form-label { display: flex; justify-content: space-between; align-items: center; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-.range { -webkit-appearance: none; width: 100%; height: 2px; background: var(--surface-2); border-radius: 2px; outline: none; cursor: pointer; margin-bottom: 6px; }
-.range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; box-shadow: 0 0 10px rgba(200,255,87,0.5); transition: transform var(--transition); }
-.range::-webkit-slider-thumb:hover { transform: scale(1.2); }
-.range-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); }
-.error-msg { font-size: 12px; color: var(--against); margin-bottom: 16px; padding: 10px 14px; background: rgba(255,77,109,0.08); border: 1px solid rgba(255,77,109,0.2); border-radius: var(--radius); }
-.launch-btn { width: 100%; justify-content: center; padding: 14px; font-size: 12px; margin-bottom: 12px; }
-.launch-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
-.launch-hint { text-align: center; font-size: 10px; color: var(--text-dim); letter-spacing: 0.03em; }
-.feature-pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.pill { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); padding: 5px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; }
-.pill-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-
 /* Avatars */
 .sm-avatar { width: 18px; height: 18px; border-radius: 50%; font-size: 8px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .avatar-for     { background: rgba(62,232,160,0.2);  color: var(--for); }
@@ -597,6 +500,5 @@ onUnmounted(() => clearInterval(demoTimer))
   .hero-stat-card { padding: 14px 12px; }
   .launch-card { padding: 20px 16px; }
   .form-row { grid-template-columns: 1fr; gap: 16px; }
-  .pill { font-size: 10px; padding: 4px 10px; }
 }
 </style>
