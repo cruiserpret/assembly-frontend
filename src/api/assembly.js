@@ -9,7 +9,7 @@ let startInFlight = false
 
 async function request(url, options = {}) {
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 180000) // 3 min timeout
+  const timeout = setTimeout(() => controller.abort(), 600000) // 10 min timeout
 
   try {
     const res = await fetch(`${ BASE }${ url }`, {
