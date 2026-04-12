@@ -285,7 +285,7 @@ const gevAgents = [
 ]
 
 async function launch() {
-  if (!form.value.topic.trim()) return
+  if (!form.value.topic.trim() || loading.value) return
   loading.value = true
   error.value = ''
   try {

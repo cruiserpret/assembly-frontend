@@ -1,7 +1,13 @@
 <template>
   <div class="sim-layout">
 
-    <!-- ── TOP BAR ─────────────────────────────────────── -->
+    <LoadingScreen
+      v-if="showLoader"
+      :numAgents="numAgents"
+      @done="showLoader = false"
+    />
+
+    <!-- TOP BAR -->
     <div class="sim-topbar">
       <div class="topbar-left">
         <div class="sim-topic-label" v-if="debate">{{ debate.topic || `Simulation ${id.slice(0,8)}` }}</div>
@@ -33,9 +39,8 @@
       </div>
     </div>
 
-    <!-- ── MAIN BODY ────────────────────────────────────── -->
+    <!-- MAIN BODY -->
     <div class="sim-body">
-
       <div class="sim-main">
 
         <!-- GRAPH PANEL -->
@@ -59,13 +64,11 @@
               <g ref="nodesG"></g>
             </svg>
 
-            <!-- Empty state -->
             <div v-if="!allAgents.length" class="graph-empty">
               <div class="graph-empty-icon">◎</div>
               <div class="mono">Waiting for agents...</div>
             </div>
 
-            <!-- Legend -->
             <div class="graph-legend">
               <div class="legend-item"><div class="legend-dot" style="background:var(--for)"></div><span class="mono">For</span></div>
               <div class="legend-item"><div class="legend-dot" style="background:var(--against)"></div><span class="mono">Against</span></div>
@@ -75,11 +78,10 @@
               <div class="legend-item"><div class="legend-line held"></div><span class="mono">Debating</span></div>
             </div>
 
-            <!-- Agent hover tooltip -->
             <div v-if="hoveredAgent" class="agent-tooltip" :style="`left:${ttX}px;top:${ttY}px`">
               <div class="tt-name">{{ hoveredAgent.name }}</div>
               <div class="tag" :class="`tag-${hoveredAgent.stance}`" style="margin-bottom:6px;">{{ hoveredAgent.stance }}</div>
-              <div class="tt-opinion">{{ hoveredAgent.opinion?.slice(0,110) }}{{ hoveredAgent.opinion?.length > 110 ? '...' : '' }}</div>
+              <div class="tt-opinion">{{ hoveredAgent.opinion?.slice(0,120) }}{{ hoveredAgent.opinion?.length > 120 ? '...' : '' }}</div>
             </div>
           </div>
         </div>
@@ -115,7 +117,7 @@
                     <div class="sm-avatar" :class="`avatar-${agent.stance}`">{{ agent.name?.charAt(0) }}</div>
                     <span class="stmt-name mono">{{ agent.name }}</span>
                     <span class="tag" :class="`tag-${agent.stance}`" style="font-size:9px;padding:2px 6px;">{{ agent.stance }}</span>
-                    <span v-if="agent.opinion_delta" class="mono" :class="agent.opinion_delta>0?'delta-positive':'delta-negative'" style="font-size:10px;">
+                    <span v-if="agent.opinion_delta" class="mono" :class="agent.opinion_delta>0?'delta-positive':'delta-negative'" style="font-size:10px;margin-left:auto;">
                       {{ agent.opinion_delta>0?'▲':'▼' }} {{ Math.abs(agent.opinion_delta).toFixed(2) }}
                     </span>
                   </div>
@@ -131,11 +133,10 @@
 
       </div>
 
-      <!-- ── WORKBENCH ── -->
+      <!-- WORKBENCH -->
       <aside class="workbench">
         <div class="wb-header mono">Workbench</div>
 
-        <!-- Steps -->
         <div class="steps-list">
           <div v-for="(step, i) in steps" :key="step.id"
             class="step-item" :class="step.status">
@@ -155,7 +156,6 @@
 
         <div class="divider"></div>
 
-        <!-- Inject -->
         <div class="wb-sec">
           <div class="wb-sec-label mono">⚡ Inject Event</div>
           <textarea v-model="injectText" class="textarea" style="font-size:12px;min-height:60px;"
@@ -176,7 +176,6 @@
 
         <div class="divider"></div>
 
-        <!-- Branch -->
         <div class="wb-sec">
           <div class="wb-sec-label mono">⑂ Branch Timeline</div>
           <input v-model.number="branchTick" type="number" class="input" style="font-size:12px;" placeholder="From tick (e.g. 2)"/>
@@ -193,7 +192,6 @@
 
         <div class="divider"></div>
 
-        <!-- Distribution -->
         <div class="wb-sec" v-if="latestRound">
           <div class="wb-sec-label mono">Distribution · Round {{ latestRound.round }}</div>
           <div class="dist-row">
@@ -215,7 +213,7 @@
       </aside>
     </div>
 
-    <!-- ── SYSTEM LOG ─────────────────────────────────────── -->
+    <!-- SYSTEM LOG -->
     <div class="sys-log" :class="{ expanded: logExpanded }">
       <div class="log-bar" @click="logExpanded = !logExpanded">
         <span class="mono" style="font-size:10px;letter-spacing:0.1em;">SYSTEM LOG</span>
@@ -233,7 +231,7 @@
       </div>
     </div>
 
-    <!-- ── AGENT DETAIL ──────────────────────────────────── -->
+    <!-- AGENT DETAIL -->
     <transition name="slide-in">
       <div v-if="selectedAgent" class="agent-panel">
         <div class="ap-head">
@@ -250,8 +248,12 @@
         <div class="ap-label mono" style="margin-top:10px;">Opinion</div>
         <p class="ap-text">{{ selectedAgent.opinion }}</p>
         <div class="ap-stats">
-          <div class="ap-stat"><span class="mono muted" style="font-size:10px;">Score</span><span class="accent mono">{{ (selectedAgent.score*100).toFixed(0) }}</span></div>
-          <div class="ap-stat"><span class="mono muted" style="font-size:10px;">Delta</span><span class="mono" :class="(selectedAgent.opinion_delta||0)>0?'delta-positive':'delta-negative'">{{ selectedAgent.opinion_delta>0?'+':'' }}{{ (selectedAgent.opinion_delta||0).toFixed(3) }}</span></div>
+          <div class="ap-stat">
+            <span class="mono muted" style="font-size:10px;">Delta</span>
+            <span class="mono" :class="(selectedAgent.opinion_delta||0)>0?'delta-positive':'delta-negative'">
+              {{ selectedAgent.opinion_delta>0?'+':'' }}{{ (selectedAgent.opinion_delta||0).toFixed(3) }}
+            </span>
+          </div>
         </div>
         <router-link :to="`/agent/${selectedAgent.id}`" class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:12px;font-size:10px;">Memory across simulations →</router-link>
       </div>
@@ -262,16 +264,23 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import * as d3 from 'd3'
+import LoadingScreen from '../components/LoadingScreen.vue'
 import { assembly } from '../api/assembly.js'
 
 const props = defineProps({ id: String })
 
+// ── Read agent count from URL ──────────────────────────────
+const route     = useRoute()
+const numAgents = parseInt(route.query.agents) || 20
+
 // ── Refs ──────────────────────────────────────────────────
 const debate        = ref(null)
 const loading       = ref(true)
+const showLoader    = ref(true)
 const polling       = ref(false)
-const activeTab     = ref('Split')
+const activeTab     = ref('Debate')
 const selectedAgent = ref(null)
 const hoveredAgent  = ref(null)
 const ttX           = ref(0)
@@ -298,11 +307,11 @@ let pollTimer  = null
 
 // ── Steps ─────────────────────────────────────────────────
 const steps = ref([
-  { id:1, title:'Knowledge Ingestion',  desc:'Web search + PDF parsing',       endpoint:'POST /api/simulation/start',   status:'pending' },
-  { id:2, title:'Graph Build',          desc:'NetworkX + PageRank entity graph',endpoint:'GET  /api/simulation/:id',    status:'pending' },
-  { id:3, title:'Agent Generation',     desc:'Personas with demographics',      endpoint:null,                           status:'pending' },
-  { id:4, title:'Structured Debate',    desc:'form → challenge → revise',       endpoint:'GET  /api/simulation/:id/debate', status:'pending' },
-  { id:5, title:"God's Eye View",       desc:'ReportAgent synthesizes output',  endpoint:'GET  /api/report/:id',        status:'pending' },
+  { id:1, title:'Knowledge Ingestion',  desc:'Web search + PDF parsing',            endpoint:'POST /api/simulation/start',      status:'pending' },
+  { id:2, title:'Graph Build',          desc:'NetworkX + PageRank entity graph',     endpoint:'GET  /api/simulation/:id',        status:'pending' },
+  { id:3, title:'Agent Generation',     desc:'Personas with demographics',           endpoint:null,                              status:'pending' },
+  { id:4, title:'Structured Debate',    desc:'form → challenge → revise',            endpoint:'GET  /api/simulation/:id/debate', status:'pending' },
+  { id:5, title:"God's Eye View",       desc:'ReportAgent synthesizes output',       endpoint:'GET  /api/report/:id',            status:'pending' },
 ])
 
 // ── Computed ──────────────────────────────────────────────
@@ -338,7 +347,7 @@ function addLog(msg, type='info') {
   nextTick(() => { if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight })
 }
 
-// ── Steps ─────────────────────────────────────────────────
+// ── Steps updater ─────────────────────────────────────────
 function updateSteps() {
   const rounds = debate.value?.rounds?.length || 0
   steps.value[0].status = 'complete'
@@ -351,17 +360,16 @@ function updateSteps() {
 // ── D3 Graph ──────────────────────────────────────────────
 const stanceColor = { for:'#3EE8A0', against:'#FF4D6D', neutral:'#7A8BA6' }
 const stanceFill  = { for:'url(#ng-for)', against:'url(#ng-against)', neutral:'url(#ng-neutral)' }
+const NODE_R      = 16  // fixed equal size for all nodes
 
 function buildGraph() {
   if (!graphSvg.value || !graphArea.value || !allAgents.value.length) return
-
   const W = graphArea.value.clientWidth
   const H = graphArea.value.clientHeight
   if (W < 10 || H < 10) return
 
-  const svgEl = d3.select(graphSvg.value).attr('width', W).attr('height', H)
+  d3.select(graphSvg.value).attr('width', W).attr('height', H)
 
-  // Build links from rounds
   const links = []
   ;(debate.value?.rounds || []).forEach(round => {
     const agents = round.agents || []
@@ -373,8 +381,7 @@ function buildGraph() {
             (l.source===agents[j].id&&l.target===agents[i].id)
           )
           if (!ex) links.push({
-            source: agents[i].id,
-            target: agents[j].id,
+            source: agents[i].id, target: agents[j].id,
             shifted: agents[i].opinion_delta!==0 || agents[j].opinion_delta!==0,
           })
         }
@@ -382,7 +389,8 @@ function buildGraph() {
     }
   })
 
-  const nodes = allAgents.value.map(a => ({ ...a, r: 16 }))
+  // Equal size nodes — r is fixed
+  const nodes = allAgents.value.map(a => ({ ...a, r: NODE_R }))
   const nodeMap = new Map(nodes.map(n=>[n.id,n]))
   const validLinks = links.filter(l=>nodeMap.has(l.source)&&nodeMap.has(l.target)).slice(0,80)
 
@@ -391,10 +399,10 @@ function buildGraph() {
   if (simulation) simulation.stop()
 
   simulation = d3.forceSimulation(nodes)
-    .force('link', d3.forceLink(validLinks).id(d=>d.id).distance(90).strength(0.25))
-    .force('charge', d3.forceManyBody().strength(-250))
+    .force('link', d3.forceLink(validLinks).id(d=>d.id).distance(70).strength(0.25))
+    .force('charge', d3.forceManyBody().strength(-200))
     .force('center', d3.forceCenter(W/2, H/2))
-    .force('collide', d3.forceCollide(d=>d.r+10))
+    .force('collide', d3.forceCollide(NODE_R + 8))
     .force('x', d3.forceX(W/2).strength(0.03))
     .force('y', d3.forceY(H/2).strength(0.03))
 
@@ -405,8 +413,7 @@ function buildGraph() {
     .attr('stroke-dasharray', d => d.shifted ? null : '3,5')
 
   const nodeSel = d3.select(nodesG.value)
-    .selectAll('g').data(nodes).join('g')
-    .attr('cursor','pointer')
+    .selectAll('g').data(nodes).join('g').attr('cursor','pointer')
     .call(d3.drag()
       .on('start', (e,d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y })
       .on('drag',  (e,d) => { d.fx=e.x; d.fy=e.y })
@@ -421,38 +428,26 @@ function buildGraph() {
     .on('mouseleave', () => { hoveredAgent.value = null })
     .on('click', (e, d) => selectAgent(d))
 
-  // Outer glow ring
-  nodeSel.append('circle')
-    .attr('r', d=>d.r+7).attr('fill','none')
-    .attr('stroke', d=>stanceColor[d.stance]||'#7A8BA6')
-    .attr('stroke-width', 1).attr('opacity', 0.18)
+  nodeSel.append('circle').attr('r', NODE_R+6).attr('fill','none')
+    .attr('stroke', d=>stanceColor[d.stance]||'#7A8BA6').attr('stroke-width', 1).attr('opacity', 0.18)
 
-  // Main node
-  nodeSel.append('circle')
-    .attr('r', d=>d.r)
+  nodeSel.append('circle').attr('r', NODE_R)
     .attr('fill', d=>stanceFill[d.stance]||stanceFill.neutral)
     .attr('filter', d=>`url(#glow-${d.stance})`)
-    .attr('stroke', d=>stanceColor[d.stance]||'#7A8BA6')
-    .attr('stroke-width', 1.5)
+    .attr('stroke', d=>stanceColor[d.stance]||'#7A8BA6').attr('stroke-width', 1.5)
 
-  // Shift ring
   nodeSel.filter(d=>Math.abs(d.opinion_delta||0)>0.05)
-    .append('circle').attr('r',d=>d.r+4).attr('fill','none')
+    .append('circle').attr('r', NODE_R+4).attr('fill','none')
     .attr('stroke', d=>(d.opinion_delta||0)>0?'rgba(200,255,87,0.5)':'rgba(255,77,109,0.5)')
     .attr('stroke-width',1.5).attr('stroke-dasharray','3,3')
 
-  // Letter
-  nodeSel.append('text')
-    .text(d=>d.name?.charAt(0)||'?')
+  nodeSel.append('text').text(d=>d.name?.charAt(0)||'?')
     .attr('text-anchor','middle').attr('dominant-baseline','central')
-    .attr('font-family','Bebas Neue,sans-serif')
-    .attr('font-size', d=>d.r*0.9)
+    .attr('font-family','Bebas Neue,sans-serif').attr('font-size', NODE_R * 0.9)
     .attr('fill','rgba(255,255,255,0.9)').attr('pointer-events','none')
 
-  // Name label
-  nodeSel.append('text')
-    .text(d=>d.name?.split(' ')[0]||'')
-    .attr('text-anchor','middle').attr('dy',d=>d.r+14)
+  nodeSel.append('text').text(d=>d.name?.split(' ')[0]||'')
+    .attr('text-anchor','middle').attr('dy', NODE_R+14)
     .attr('font-family','JetBrains Mono,monospace').attr('font-size',9)
     .attr('fill','rgba(255,255,255,0.4)').attr('pointer-events','none')
 
@@ -463,10 +458,9 @@ function buildGraph() {
   })
 }
 
-// ── Rebuild graph when agents change ──────────────────────
 watch(allAgents, () => nextTick(buildGraph), { deep:true })
 
-// ── API ───────────────────────────────────────────────────
+// ── API — only refreshDebate here, never startSimulation ───
 async function refreshDebate() {
   polling.value = true
   addLog(`Polling simulation ${props.id.slice(0,8)}...`)
@@ -511,7 +505,7 @@ function selectAgent(agent) {
   if (agent) addLog(`Selected: ${agent.name} (${agent.stance})`)
 }
 
-// ── Lifecycle ─────────────────────────────────────────────
+// ── Lifecycle — NO startSimulation call here ───────────────
 onMounted(async () => {
   addLog('Simulation view initialised.')
   steps.value[0].status = 'active'
@@ -522,7 +516,9 @@ onMounted(async () => {
     if (graphArea.value) resizeObs.observe(graphArea.value)
   })
   pollTimer = setInterval(() => {
-    if (!allAgents.value.length || (debate.value?.rounds?.length||0) < 3) refreshDebate()
+    if (!allAgents.value.length || (debate.value?.rounds?.length||0) < 3) {
+      refreshDebate()
+    }
   }, 8000)
 })
 
@@ -536,50 +532,37 @@ onUnmounted(() => {
 <style scoped>
 .sim-layout { display:flex; flex-direction:column; height:calc(100vh - 56px); overflow:hidden; }
 
-/* Top bar */
-.sim-topbar {
-  display:flex; align-items:center; gap:16px;
-  padding:0 20px; height:52px; flex-shrink:0;
-  border-bottom:1px solid var(--border); background:var(--bg-2);
-}
+.sim-topbar { display:flex; align-items:center; gap:16px; padding:0 20px; height:52px; flex-shrink:0; border-bottom:1px solid var(--border); background:var(--bg-2); }
 .topbar-left  { flex:1; display:flex; align-items:center; gap:12px; min-width:0; }
 .topbar-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
 .topbar-badges { display:flex; align-items:center; gap:8px; flex-shrink:0; }
 .sim-topic-label { font-weight:500; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-
 .topbar-tabs { display:flex; gap:3px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px; }
 .tab-btn { font-family:var(--mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:5px 14px; border-radius:4px; border:none; background:transparent; color:var(--text-muted); cursor:pointer; transition:all var(--transition); }
 .tab-btn.active { background:var(--surface-2); color:var(--text); border:1px solid var(--border-hi); }
 
-/* Body */
 .sim-body { flex:1; display:grid; grid-template-columns:1fr 256px; overflow:hidden; }
 .sim-main { display:flex; overflow:hidden; }
 
-/* Panels */
 .panel-wrap { display:flex; flex-direction:column; flex:1; overflow:hidden; border-right:1px solid var(--border); }
 .panel-wrap.half { flex:1; }
 .panel-header { display:flex; justify-content:space-between; align-items:center; padding:10px 16px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border); flex-shrink:0; }
 
-/* Graph */
 .graph-area { flex:1; overflow:hidden; position:relative; background:var(--bg); }
 .graph-svg  { width:100%; height:100%; display:block; }
-
 .graph-empty { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:var(--text-dim); font-size:11px; letter-spacing:.08em; text-transform:uppercase; pointer-events:none; }
 .graph-empty-icon { font-size:40px; opacity:.15; animation:pulse 2s ease-in-out infinite; }
-
 .graph-legend { position:absolute; bottom:14px; left:14px; display:flex; align-items:center; gap:12px; background:rgba(6,8,15,.85); border:1px solid var(--border); border-radius:6px; padding:7px 12px; backdrop-filter:blur(8px); }
 .legend-item { display:flex; align-items:center; gap:5px; font-size:10px; color:var(--text-muted); }
 .legend-dot  { width:8px; height:8px; border-radius:50%; }
 .legend-sep  { width:1px; height:14px; background:var(--border); }
 .legend-line { width:18px; height:1.5px; }
 .legend-line.shifted { background:rgba(62,232,160,.5); }
-.legend-line.held    { background:rgba(255,255,255,.15); border-top:1px dashed rgba(255,255,255,.15); }
-
+.legend-line.held    { background:rgba(255,255,255,.15); }
 .agent-tooltip { position:absolute; pointer-events:none; background:var(--surface-2); border:1px solid var(--border-hi); border-radius:8px; padding:12px 14px; width:210px; z-index:50; box-shadow:0 8px 32px rgba(0,0,0,.5); }
 .tt-name   { font-weight:600; font-size:13px; margin-bottom:6px; }
 .tt-opinion { font-size:11px; color:var(--text-muted); line-height:1.5; }
 
-/* Debate */
 .debate-scroll { flex:1; overflow-y:auto; padding:16px; }
 .debate-empty  { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; height:200px; color:var(--text-muted); font-size:12px; }
 .round-block   { margin-bottom:24px; }
@@ -588,7 +571,6 @@ onUnmounted(() => {
 .round-label   { font-size:13px; color:var(--text-muted); white-space:nowrap; }
 .stance-bar    { display:flex; height:3px; border-radius:2px; overflow:hidden; margin-bottom:12px; }
 .sb-seg        { transition:width .5s ease; }
-
 .statement { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:10px 12px; margin-bottom:6px; cursor:pointer; transition:all var(--transition); }
 .statement:hover { border-color:var(--border-hi); background:var(--surface-2); }
 .stmt-for     { border-left:2px solid rgba(62,232,160,.4); }
@@ -602,10 +584,8 @@ onUnmounted(() => {
 .stmt-name { font-size:11px; font-weight:500; }
 .stmt-text { font-size:12px; color:var(--text-muted); line-height:1.6; }
 
-/* Workbench */
 .workbench { display:flex; flex-direction:column; overflow-y:auto; background:var(--bg-2); border-left:1px solid var(--border); }
 .wb-header { padding:14px 16px; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border); flex-shrink:0; }
-
 .steps-list { padding:16px; }
 .step-item  { display:flex; gap:10px; position:relative; padding-bottom:14px; }
 .step-connector { position:absolute; left:9px; top:-14px; width:1px; height:14px; background:var(--border); }
@@ -618,7 +598,6 @@ onUnmounted(() => {
 .step-ep    { font-family:var(--mono); font-size:9px; color:var(--accent); margin-top:3px; opacity:.55; }
 .step-item.complete .step-title { color:var(--text); }
 .step-item.active   .step-title { color:var(--accent); }
-
 .wb-sec       { padding:14px 16px; border-top:1px solid var(--border); }
 .wb-sec-label { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px; font-family:var(--mono); }
 .inject-result { margin-top:8px; }
@@ -627,7 +606,6 @@ onUnmounted(() => {
 .dist-track { flex:1; height:3px; background:var(--surface-2); border-radius:2px; overflow:hidden; }
 .dist-fill  { height:100%; border-radius:2px; transition:width .5s ease; }
 
-/* System log */
 .sys-log { border-top:1px solid var(--border); background:var(--bg); flex-shrink:0; height:36px; overflow:hidden; transition:height var(--transition); }
 .sys-log.expanded { height:150px; }
 .log-bar  { display:flex; justify-content:space-between; align-items:center; padding:0 16px; height:36px; cursor:pointer; }
@@ -639,7 +617,6 @@ onUnmounted(() => {
 .log-msg.success { color:var(--for); }
 .log-msg.error   { color:var(--against); }
 
-/* Agent panel */
 .agent-panel { position:fixed; bottom:50px; right:270px; width:270px; background:var(--surface-2); border:1px solid var(--border-hi); border-radius:12px; padding:16px; z-index:200; box-shadow:0 16px 48px rgba(0,0,0,.6); }
 .ap-head { display:flex; align-items:center; gap:10px; }
 .ap-avatar { width:38px; height:38px; border-radius:50%; font-family:var(--display); font-size:20px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
@@ -652,4 +629,25 @@ onUnmounted(() => {
 .slide-in-enter-active, .slide-in-leave-active { transition:all .25s cubic-bezier(.16,1,.3,1); }
 .slide-in-enter-from { opacity:0; transform:translateX(16px); }
 .slide-in-leave-to   { opacity:0; transform:translateX(16px); }
+
+@media (max-width: 900px) { .sim-body { grid-template-columns:1fr; } .workbench { display:none; } }
+@media (max-width: 768px) {
+  .sim-topbar { padding:8px 12px; height:auto; flex-wrap:wrap; gap:6px; }
+  .sim-topic-label { font-size:11px; width:100%; }
+  .topbar-badges { order:-1; }
+  .topbar-tabs { order:2; width:100%; justify-content:center; }
+  .tab-btn { flex:1; text-align:center; padding:6px 4px; font-size:9px; }
+  .topbar-right { order:1; margin-left:auto; }
+  .topbar-right .btn-ghost { display:none; }
+  .sim-main { flex-direction:column; }
+  .graph-area { height:300px; min-height:300px; }
+  .debate-scroll { padding:10px; max-height:60vh; }
+  .agent-panel { position:fixed; bottom:0; left:0; right:0; width:100%; border-radius:16px 16px 0 0; padding:20px 16px 32px; z-index:300; }
+  .sys-log { height:32px; }
+  .sys-log.expanded { height:120px; }
+}
+@media (max-width: 480px) {
+  .graph-legend { gap:8px; padding:5px 10px; font-size:9px; }
+  .legend-dot { width:6px; height:6px; }
+}
 </style>
