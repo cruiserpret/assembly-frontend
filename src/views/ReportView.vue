@@ -6,20 +6,19 @@
       <span class="mono muted">Generating God's Eye View...</span>
     </div>
 
-    <!-- ── Tier 1: show friendly error_message instead of generic error ── -->
     <div v-else-if="error" class="error-screen">
       <div class="error-icon">⚠</div>
       <div class="error-title mono">{{ errorTitle }}</div>
       <p class="error-body mono">{{ error }}</p>
-      <router-link :to="`/simulation/${id}`" class="btn btn-ghost" style="margin-top:16px;">← Back to Simulation</router-link>
-      <router-link to="/" class="btn btn-primary" style="margin-top:8px;">+ New Simulation</router-link>
+      <router-link to="/" class="btn btn-primary" style="margin-top:16px;">+ New Simulation</router-link>
+      <router-link :to="`/simulation/${id}`" class="btn btn-ghost" style="margin-top:8px;">← Back to Debate</router-link>
     </div>
 
     <div v-else-if="report" class="report-wrap">
 
       <div class="share-banner">
         <span class="mono" style="font-size:10px; color:var(--text-muted);">
-          ⤴ Share this simulation with your team
+          ⤴ Share this report with your team
         </span>
         <div class="share-url-row">
           <span class="share-url mono">{{ shareUrl }}</span>
@@ -36,12 +35,10 @@
           God's Eye View Report
         </div>
         <h1 class="masthead-title">{{ report.topic }}</h1>
-        <!-- ── Tier 1: source count display ── -->
         <div class="masthead-meta mono">
-          Simulation #{{ id.slice(0,12) }} &nbsp;·&nbsp;
-          {{ report.agents_shifted + report.agents_held }} stakeholder groups &nbsp;·&nbsp;
-          {{ new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) }}
-        </div>
+  {{ report.agents_shifted + report.agents_held }} stakeholder groups &nbsp;·&nbsp;
+  {{ new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'}) }}
+</div>
         <div class="masthead-source-note mono">
           Simulated from real-world web data across hundreds of sources
         </div>
@@ -52,13 +49,11 @@
         <!-- LEFT: main content -->
         <div class="report-main">
 
-          <!-- Executive Summary -->
           <section class="report-section fade-up fade-up-1">
             <div class="section-label mono">Executive Summary</div>
             <p class="summary-text">{{ report.summary }}</p>
           </section>
 
-          <!-- Predicted Trajectory -->
           <section class="report-section fade-up fade-up-2">
             <div class="section-label mono">Predicted Trajectory</div>
             <div class="trajectory-block">
@@ -67,7 +62,6 @@
             </div>
           </section>
 
-          <!-- Final Consensus -->
           <section class="report-section fade-up fade-up-3">
             <div class="section-label mono">Final Consensus</div>
             <div class="consensus-block">
@@ -102,7 +96,6 @@
             </div>
           </section>
 
-          <!-- Agent Journey — collapsible -->
           <section class="report-section fade-up fade-up-4">
             <div class="section-label mono collapsible" @click="journeyOpen = !journeyOpen">
               Agent Journey
@@ -173,16 +166,13 @@
             </div>
           </div>
 
-          <!-- Actions -->
+          <!-- Actions — View Debate removed (now in top nav) -->
           <div class="card fade-up fade-up-1" style="padding:18px;">
             <div class="section-label mono" style="margin-bottom:12px;">Actions</div>
-            <router-link :to="`/simulation/${id}`" class="btn btn-ghost" style="width:100%; justify-content:center; margin-bottom:8px;">
-              ← View Debate
-            </router-link>
             <button class="btn btn-ghost" style="width:100%; justify-content:center; margin-bottom:8px;" @click="shareReport">
               {{ copied ? '✓ Link Copied!' : '⤴ Share Report' }}
             </button>
-            <button class="btn btn-ghost" style="width:100%; justify-content:center; margin-bottom:8px;" @click="exportPDF">
+            <button class="btn btn-ghost" style="width:100%; justify-content:center; margin-bottom:12px;" @click="exportPDF">
               ↓ Export PDF
             </button>
             <router-link to="/" class="btn btn-primary" style="width:100%; justify-content:center;">
@@ -225,7 +215,6 @@ onMounted(async () => {
   try {
     report.value = await assembly.getReport(props.id)
   } catch (e) {
-    // ── Tier 1: map error_type to friendly title + message ──
     const msg = e.message || ''
     if (msg.includes('thin_data') || msg.toLowerCase().includes('not enough')) {
       errorTitle.value = 'Not enough data found'
@@ -248,137 +237,50 @@ onMounted(async () => {
 
 <style scoped>
 .report-page {
-  min-height: calc(100vh - 56px);
+  min-height: calc(100vh - 72px); /* account for taller nav on report page */
   max-width: 1200px;
   margin: 0 auto;
   padding: 40px 24px 80px;
 }
 
 .loading-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  min-height: 50vh;
-  font-size: 13px;
-  color: var(--text-muted);
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 16px; min-height: 50vh;
+  font-size: 13px; color: var(--text-muted);
 }
 
-/* ── Tier 1: friendly error screen ── */
 .error-screen {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  min-height: 50vh;
-  text-align: center;
-  padding: 40px 24px;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 12px; min-height: 50vh;
+  text-align: center; padding: 40px 24px;
 }
-.error-icon {
-  font-size: 40px;
-  color: var(--against);
-  opacity: 0.6;
-  margin-bottom: 8px;
-}
-.error-title {
-  font-size: 14px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text);
-  margin-bottom: 4px;
-}
-.error-body {
-  font-size: 13px;
-  color: var(--text-muted);
-  line-height: 1.6;
-  max-width: 420px;
-}
+.error-icon { font-size: 40px; color: var(--against); opacity: 0.6; margin-bottom: 8px; }
+.error-title { font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); margin-bottom: 4px; }
+.error-body { font-size: 13px; color: var(--text-muted); line-height: 1.6; max-width: 420px; }
 
-/* Masthead */
 .masthead { margin-bottom: 48px; border-bottom: 1px solid var(--border); padding-bottom: 32px; }
-.masthead-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 16px;
-}
-.masthead-title {
-  font-family: var(--display);
-  font-size: clamp(32px, 5vw, 60px);
-  line-height: 1.0;
-  color: var(--text);
-  margin-bottom: 16px;
-}
+.masthead-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; }
+.masthead-title { font-family: var(--display); font-size: clamp(32px, 5vw, 60px); line-height: 1.0; color: var(--text); margin-bottom: 16px; }
 .masthead-meta { font-size: 11px; color: var(--text-dim); letter-spacing: 0.05em; }
-/* ── Tier 1: source note below meta ── */
-.masthead-source-note {
-  font-size: 10px;
-  color: var(--text-dim);
-  letter-spacing: 0.04em;
-  margin-top: 6px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.masthead-source-note::before {
-  content: '◎';
-  color: var(--accent);
-  opacity: 0.5;
-  font-size: 10px;
-}
+.masthead-source-note { font-size: 10px; color: var(--text-dim); letter-spacing: 0.04em; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+.masthead-source-note::before { content: '◎'; color: var(--accent); opacity: 0.5; font-size: 10px; }
 
-/* Layout */
-.report-body {
-  display: grid;
-  grid-template-columns: 1fr 260px;
-  gap: 32px;
-  align-items: start;
-}
+.report-body { display: grid; grid-template-columns: 1fr 260px; gap: 32px; align-items: start; }
 .report-section { margin-bottom: 40px; }
 
-.section-label {
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 16px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
-  font-family: var(--mono);
-}
-.section-label.collapsible {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  user-select: none;
-  transition: color var(--transition);
-}
+.section-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--border); font-family: var(--mono); }
+.section-label.collapsible { display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; transition: color var(--transition); }
 .section-label.collapsible:hover { color: var(--text); }
 .collapse-arrow { font-size: 12px; transition: transform 0.25s ease; display: inline-block; }
 .collapse-arrow.open { transform: rotate(90deg); }
 
 .summary-text { font-size: 16px; line-height: 1.8; color: var(--text); font-weight: 300; }
 
-.trajectory-block {
-  display: flex; gap: 16px; align-items: flex-start;
-  background: var(--surface); border: 1px solid var(--border);
-  border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 20px;
-}
+.trajectory-block { display: flex; gap: 16px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 20px; }
 .trajectory-arrow { font-size: 24px; color: var(--accent); flex-shrink: 0; margin-top: 2px; }
 .trajectory-text { font-size: 15px; color: var(--text-muted); line-height: 1.7; font-weight: 300; }
 
-.consensus-block {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-lg); padding: 24px;
-}
+.consensus-block { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; }
 .consensus-bars { display: flex; flex-direction: column; gap: 12px; justify-content: center; }
 .consensus-bar-row { display: flex; align-items: center; gap: 10px; }
 .cbar-track { flex: 1; height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
@@ -388,11 +290,7 @@ onMounted(async () => {
 .consensus-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-top: 4px; }
 
 .agent-summaries { display: flex; flex-direction: column; gap: 8px; }
-.agent-summary-row {
-  display: grid; grid-template-columns: 160px 1fr auto; align-items: center;
-  gap: 16px; background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 14px 18px; transition: border-color var(--transition);
-}
+.agent-summary-row { display: grid; grid-template-columns: 160px 1fr auto; align-items: center; gap: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; transition: border-color var(--transition); }
 .agent-summary-row:hover { border-color: var(--border-hi); }
 .agent-summary-row.shifted { border-left: 2px solid rgba(62,232,160,0.4); }
 .agent-summary-row.held    { border-left: 2px solid var(--border); }
@@ -434,15 +332,10 @@ onMounted(async () => {
 }
 
 @media print {
-  .share-banner, .report-sidebar .card:last-child { display: none; }
+  .share-banner, .report-sidebar { display: none; }
   body { background: white !important; color: black !important; }
   .report-page { padding: 20px !important; max-width: 100% !important; }
   .report-body { grid-template-columns: 1fr !important; }
-  .report-sidebar { display: none; }
-  .section-label { color: #666 !important; border-color: #ddd !important; }
-  .summary-text, .trajectory-text, .as-moment { color: #333 !important; }
-  .masthead-title { color: black !important; }
-  .agent-summary-row { border-color: #ddd !important; background: #f9f9f9 !important; }
   nav { display: none !important; }
 }
 </style>

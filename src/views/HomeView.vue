@@ -166,7 +166,7 @@
             placeholder="Should AI be regulated by governments?" rows="3" :disabled="loading"></textarea>
         </div>
 
-        <!-- ── CONTEXT FIELD (Tier 1 feature) ── -->
+        <!-- ── CONTEXT FIELD ── -->
         <div class="form-group">
           <label class="form-label mono">
             Context
@@ -306,7 +306,6 @@ const form    = ref({ topic: '', context: '', num_agents: 20, num_rounds: 3 })
 const loading = ref(false)
 const error   = ref('')
 
-// ── UCSD Example Questions (Tier 1 feature) ──────────────
 const exampleQuestions = [
   {
     label: 'Geisel 24/7?',
@@ -356,7 +355,7 @@ async function launch() {
   try {
     const res = await assembly.startSimulation({
       topic:      form.value.topic,
-      context:    form.value.context,   // ← Tier 1: pass context to backend
+      context:    form.value.context,
       num_agents: form.value.num_agents,
       num_rounds: form.value.num_rounds,
     })
@@ -451,7 +450,6 @@ onUnmounted(() => clearInterval(demoTimer))
 <style scoped>
 .home { min-height: calc(100vh - 56px); display: flex; flex-direction: column; align-items: center; padding: 80px 24px 60px; }
 
-/* Hero */
 .hero { text-align: center; max-width: 720px; width: 100%; margin-bottom: 64px; }
 .hero-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 24px; }
 .hero-logo-wrap { position: relative; display: flex; flex-direction: column; align-items: center; margin-bottom: 32px; }
@@ -471,7 +469,6 @@ onUnmounted(() => clearInterval(demoTimer))
 .hsc-title { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; font-family: var(--mono); }
 .hsc-desc  { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
 
-/* Demo */
 .demo-section { width: 100%; max-width: 900px; margin-bottom: 48px; }
 .demo-label { display: inline-flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; }
 .demo-window { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); }
@@ -500,40 +497,28 @@ onUnmounted(() => clearInterval(demoTimer))
 .stmt-fade-enter-active { transition: all 0.5s cubic-bezier(0.16,1,0.3,1); }
 .stmt-fade-enter-from   { opacity: 0; transform: translateY(10px); }
 
-/* Launch */
 .launch-section { width: 100%; max-width: 620px; margin-bottom: 48px; }
 .launch-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 28px 32px; }
 
-/* Example questions */
 .examples-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 20px; }
 .examples-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-dim); flex-shrink: 0; margin-top: 4px; }
 .examples-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .example-chip {
-  font-family: var(--mono);
-  font-size: 10px;
-  padding: 4px 10px;
-  border-radius: 100px;
-  border: 1px solid var(--border);
-  background: var(--bg-2);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all var(--transition);
-  letter-spacing: 0.02em;
+  font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 100px;
+  border: 1px solid var(--border); background: var(--bg-2); color: var(--text-muted);
+  cursor: pointer; transition: all var(--transition); letter-spacing: 0.02em;
 }
-.example-chip:hover:not(:disabled) {
-  border-color: rgba(200,255,87,0.3);
-  color: var(--accent);
-  background: rgba(200,255,87,0.06);
-}
+.example-chip:hover:not(:disabled) { border-color: rgba(200,255,87,0.3); color: var(--accent); background: rgba(200,255,87,0.06); }
 .example-chip:disabled { opacity: 0.4; cursor: not-allowed; }
 
 .form-group { margin-bottom: 20px; }
 .form-label { display: flex; justify-content: space-between; align-items: center; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-.form-label-hint { font-size: 10px; text-transform: none; letter-spacing: 0; color: var(--text-dim); }
 
-/* Context field */
+/* FIX 5 — was var(--text-dim), now var(--text-muted) so students can actually read it */
+.form-label-hint { font-size: 10px; text-transform: none; letter-spacing: 0; color: var(--text-muted); }
+
 .context-area { font-size: 12px; resize: none; }
-.context-counter { font-size: 10px; color: var(--text-dim); text-align: right; margin-top: 4px; letter-spacing: 0.04em; }
+.context-counter { font-size: 10px; color: var(--text-muted); text-align: right; margin-top: 4px; letter-spacing: 0.04em; }
 
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .range { -webkit-appearance: none; width: 100%; height: 2px; background: var(--surface-2); border-radius: 2px; outline: none; cursor: pointer; margin-bottom: 6px; }
@@ -545,7 +530,6 @@ onUnmounted(() => clearInterval(demoTimer))
 .launch-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
 .launch-hint { text-align: center; font-size: 10px; color: var(--text-dim); letter-spacing: 0.03em; }
 
-/* God's Eye View */
 .gev-section { width: 100%; max-width: 900px; margin-bottom: 60px; }
 .gev-header { text-align: center; margin-bottom: 24px; }
 .gev-eyebrow { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--mono); }
@@ -576,13 +560,11 @@ onUnmounted(() => clearInterval(demoTimer))
 .held-badge    { background: var(--surface-2); color: var(--text-dim); border: 1px solid var(--border); }
 .gev-cta-note { font-size: 9px; color: var(--text-dim); letter-spacing: 0.04em; line-height: 1.5; font-family: var(--mono); }
 
-/* Avatars */
 .sm-avatar { width: 18px; height: 18px; border-radius: 50%; font-size: 8px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .avatar-for     { background: rgba(62,232,160,0.2);  color: var(--for); }
 .avatar-against { background: rgba(255,77,109,0.2);  color: var(--against); }
 .avatar-neutral { background: rgba(122,139,166,0.2); color: var(--neutral); }
 
-/* Mobile */
 @media (max-width: 768px) {
   .demo-body { grid-template-columns: 1fr; }
   .demo-graph { border-right: none; border-bottom: 1px solid var(--border); }

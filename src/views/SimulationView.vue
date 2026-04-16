@@ -17,7 +17,6 @@
             <span v-if="polling" class="live-dot"></span>
             {{ polling ? 'LIVE' : 'COMPLETE' }}
           </span>
-          <span class="mono muted" style="font-size:10px;">#{{ id.slice(0,12) }}</span>
         </div>
       </div>
 
@@ -29,10 +28,12 @@
       </div>
 
       <div class="topbar-right">
-        <button class="btn btn-ghost" @click="refreshDebate" :disabled="polling" style="font-size:10px;padding:6px 14px;">
-          <span v-if="polling" class="spinner"></span>
-          {{ polling ? 'Polling...' : '↺ Refresh' }}
-        </button>
+        <!-- Issue 9: refresh button shows live status -->
+        <div class="live-status mono" v-if="polling">
+          <span class="live-dot"></span>
+          {{ liveStatus }}
+        </div>
+        <!-- God's Eye View stays lime (btn-primary) -->
         <router-link :to="`/report/${id}`" class="btn btn-primary" style="font-size:10px;padding:7px 16px;">
           God's Eye View →
         </router-link>
@@ -43,7 +44,7 @@
     <div class="sim-body">
       <div class="sim-main">
 
-        <!-- ── Tier 1: simulation error banner ── -->
+        <!-- Error banner -->
         <div v-if="simError" class="sim-error-banner mono">
           <span class="sim-error-icon">⚠</span>
           <div style="flex:1;">
@@ -58,7 +59,7 @@
           class="panel-wrap" :class="{ half: activeTab === 'Split' }">
           <div class="panel-header mono">
             <span>Agent Relationship Graph</span>
-            <span class="muted">{{ allAgents.length }} nodes · {{ edgeCount }} edges</span>
+            <span class="muted">{{ allAgents.length }} agents · {{ edgeCount }} connections</span>
           </div>
           <div class="graph-area" ref="graphArea">
             <svg ref="graphSvg" class="graph-svg">
@@ -74,9 +75,11 @@
               <g ref="nodesG"></g>
             </svg>
 
+            <!-- Issue 9: real-time agent creation indicator -->
             <div v-if="!allAgents.length && !simError" class="graph-empty">
               <div class="graph-empty-icon">◎</div>
-              <div class="mono">Waiting for agents...</div>
+              <div class="mono" v-if="agentsCreated > 0">{{ agentsCreated }} agents spawning...</div>
+              <div class="mono" v-else>Ingesting sources & building graph...</div>
             </div>
 
             <div class="graph-legend">
@@ -101,13 +104,21 @@
           class="panel-wrap" :class="{ half: activeTab === 'Split' }">
           <div class="panel-header mono">
             <span>Debate Transcript</span>
-            <span class="muted">{{ debate?.rounds?.length || 0 }} rounds</span>
+            <span class="muted">{{ debate?.rounds?.length || 0 }} of {{ numRounds }} rounds</span>
           </div>
           <div class="debate-scroll">
+
+            <!-- Issue 9: real-time loading states -->
             <div v-if="loading" class="debate-empty">
               <span class="spinner"></span>
-              <span class="mono muted">Generating agents & seeding knowledge graph...</span>
+              <div style="display:flex;flex-direction:column;gap:6px;align-items:center;">
+                <span class="mono muted">{{ liveStatus }}</span>
+                <div v-if="agentsCreated > 0" class="agents-progress mono">
+                  <span class="accent">{{ agentsCreated }}</span> agents ready
+                </div>
+              </div>
             </div>
+
             <template v-else-if="debate?.rounds?.length">
               <div v-for="round in debate.rounds" :key="round.round" class="round-block">
                 <div class="round-divider">
@@ -134,114 +145,88 @@
                   <p class="stmt-text">{{ agent.opinion }}</p>
                 </div>
               </div>
+
+              <!-- Issue 9: show "waiting for next round" while still polling -->
+              <div v-if="polling && debate.rounds.length < numRounds" class="round-waiting mono">
+                <span class="spinner" style="width:12px;height:12px;border-width:1.5px;"></span>
+                Running round {{ debate.rounds.length + 1 }}...
+              </div>
             </template>
+
             <div v-else class="debate-empty">
-              <span class="mono muted">No debate data yet. Try refreshing.</span>
+              <span class="mono muted">No debate data yet — checking again shortly...</span>
             </div>
           </div>
         </div>
 
       </div>
 
-      <!-- WORKBENCH -->
+      <!-- WORKBENCH — issues 3, 4, 5, 6 -->
       <aside class="workbench">
-        <div class="wb-header mono">Workbench</div>
+        <div class="wb-header mono">Simulation Progress</div>
 
-        <div class="steps-list">
-          <div v-for="(step, i) in steps" :key="step.id"
-            class="step-item" :class="step.status">
-            <div class="step-connector" v-if="i > 0"></div>
-            <div class="step-dot">
-              <span v-if="step.status==='complete'">✓</span>
+        <!-- Clean progress steps — no API endpoints -->
+        <div class="progress-steps">
+          <div v-for="(step, i) in steps" :key="step.id" class="progress-step" :class="step.status">
+            <div class="ps-indicator">
+              <span v-if="step.status==='complete'" class="ps-check">✓</span>
               <span v-else-if="step.status==='active'" class="spinner" style="width:10px;height:10px;border-width:1.5px;"></span>
-              <span v-else>{{ i+1 }}</span>
+              <span v-else class="ps-dot"></span>
             </div>
-            <div class="step-body">
-              <div class="step-title">{{ step.title }}</div>
-              <div class="step-desc muted">{{ step.desc }}</div>
-              <div v-if="step.endpoint" class="step-ep mono">{{ step.endpoint }}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="wb-sec">
-          <div class="wb-sec-label mono">⚡ Inject Event</div>
-          <textarea v-model="injectText" class="textarea" style="font-size:12px;min-height:60px;"
-            placeholder="Breaking: A major study reveals..." :disabled="injecting"></textarea>
-          <button class="btn btn-danger" style="width:100%;justify-content:center;margin-top:8px;font-size:10px;"
-            :disabled="!injectText.trim()||injecting" @click="inject">
-            <span v-if="injecting" class="spinner"></span>
-            {{ injecting ? 'Broadcasting...' : 'Broadcast to agents' }}
-          </button>
-          <div v-if="injectResult" class="inject-result">
-            <div class="mono muted" style="font-size:10px;margin-bottom:4px;">Tick {{ injectResult.injected_at_tick }}</div>
-            <div v-for="r in injectResult.reactions?.slice(0,5)" :key="r.agent_id" class="inject-row mono">
-              <span style="font-size:10px;">{{ r.name }}</span>
-              <span :class="r.shifted?'delta-positive':'muted'" style="font-size:10px;">{{ r.shifted?'↻ shifted':'— held' }}</span>
+            <div class="ps-body">
+              <div class="ps-title">{{ step.title }}</div>
+              <div class="ps-desc muted">{{ step.desc }}</div>
             </div>
           </div>
         </div>
 
-        <div class="divider"></div>
-
-        <div class="wb-sec">
-          <div class="wb-sec-label mono">⑂ Branch Timeline</div>
-          <input v-model.number="branchTick" type="number" class="input" style="font-size:12px;" placeholder="From tick (e.g. 2)"/>
-          <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px;font-size:10px;"
-            :disabled="!branchTick||branching" @click="branch">
-            <span v-if="branching" class="spinner"></span>
-            {{ branching ? 'Branching...' : 'Create parallel branch' }}
-          </button>
-          <div v-if="branchResult" class="mono" style="margin-top:8px;font-size:10px;">
-            <span class="accent">✓ </span>
-            <router-link :to="`/simulation/${branchResult.branch_id}`" class="accent">{{ branchResult.branch_id?.slice(0,10) }} →</router-link>
+        <!-- Overall progress bar -->
+        <div class="wb-progress-wrap" v-if="progressPct < 100">
+          <div class="wb-progress-bar">
+            <div class="wb-progress-fill" :style="`width:${progressPct}%`"></div>
           </div>
+          <span class="mono muted" style="font-size:9px;margin-top:4px;">{{ progressPct }}% complete</span>
         </div>
 
         <div class="divider"></div>
 
+        <!-- Live distribution -->
         <div class="wb-sec" v-if="latestRound">
-          <div class="wb-sec-label mono">Distribution · Round {{ latestRound.round }}</div>
+          <div class="wb-sec-label mono">Live Distribution · Round {{ latestRound.round }}</div>
           <div class="dist-row">
             <span class="mono" style="color:var(--for);font-size:10px;width:36px;">FOR</span>
             <div class="dist-track"><div class="dist-fill" :style="`width:${(forCount(latestRound)/latestRound.agents.length)*100}%;background:var(--for)`"></div></div>
-            <span class="mono muted" style="font-size:10px;width:18px;text-align:right;">{{ forCount(latestRound) }}</span>
+            <span class="mono muted" style="font-size:10px;width:24px;text-align:right;">{{ forCount(latestRound) }}</span>
           </div>
           <div class="dist-row">
             <span class="mono" style="color:var(--against);font-size:10px;width:36px;">AGN</span>
             <div class="dist-track"><div class="dist-fill" :style="`width:${(againstCount(latestRound)/latestRound.agents.length)*100}%;background:var(--against)`"></div></div>
-            <span class="mono muted" style="font-size:10px;width:18px;text-align:right;">{{ againstCount(latestRound) }}</span>
+            <span class="mono muted" style="font-size:10px;width:24px;text-align:right;">{{ againstCount(latestRound) }}</span>
           </div>
           <div class="dist-row">
             <span class="mono" style="color:var(--neutral);font-size:10px;width:36px;">NEU</span>
             <div class="dist-track"><div class="dist-fill" :style="`width:${(neutralCount(latestRound)/latestRound.agents.length)*100}%;background:var(--neutral)`"></div></div>
-            <span class="mono muted" style="font-size:10px;width:18px;text-align:right;">{{ neutralCount(latestRound) }}</span>
+            <span class="mono muted" style="font-size:10px;width:24px;text-align:right;">{{ neutralCount(latestRound) }}</span>
           </div>
         </div>
+
+        <div class="divider" v-if="latestRound"></div>
+
+        <!-- Actions -->
+        <div class="wb-sec">
+          <div class="wb-sec-label mono">Actions</div>
+          <router-link :to="`/report/${id}`" class="btn btn-primary" style="width:100%;justify-content:center;font-size:10px;margin-bottom:8px;">
+            God's Eye View →
+          </router-link>
+          <button class="btn btn-ghost" style="width:100%;justify-content:center;font-size:10px;" @click="copyLink">
+            {{ linkCopied ? '✓ Link Copied!' : '⤴ Share Simulation' }}
+          </button>
+        </div>
+
       </aside>
     </div>
 
-    <!-- SYSTEM LOG -->
-    <div class="sys-log" :class="{ expanded: logExpanded }">
-      <div class="log-bar" @click="logExpanded = !logExpanded">
-        <span class="mono" style="font-size:10px;letter-spacing:0.1em;">SYSTEM LOG</span>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span class="live-dot" v-if="polling"></span>
-          <span class="mono muted" style="font-size:10px;">{{ logLines.length }} events</span>
-          <span class="mono muted">{{ logExpanded ? '▾' : '▸' }}</span>
-        </div>
-      </div>
-      <div class="log-body" ref="logBody">
-        <div v-for="(l, i) in logLines" :key="i" class="log-line">
-          <span class="log-time mono">{{ l.time }}</span>
-          <span class="log-msg mono" :class="l.type">{{ l.msg }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- AGENT DETAIL -->
+    <!-- AGENT DETAIL PANEL -->
     <transition name="slide-in">
       <div v-if="selectedAgent" class="agent-panel">
         <div class="ap-head">
@@ -265,7 +250,6 @@
             </span>
           </div>
         </div>
-        <router-link :to="`/agent/${selectedAgent.id}`" class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:12px;font-size:10px;">Memory across simulations →</router-link>
       </div>
     </transition>
 
@@ -281,11 +265,10 @@ import { assembly } from '../api/assembly.js'
 
 const props = defineProps({ id: String })
 
-// ── Read agent count from URL ──────────────────────────────
 const route     = useRoute()
 const numAgents = parseInt(route.query.agents) || 20
+const numRounds = parseInt(route.query.rounds) || 3
 
-// ── Loader — skip if this sim was already seen ─────────────
 const loaderKey  = `assembly_loader_${props.id}`
 const showLoader = ref(!sessionStorage.getItem(loaderKey))
 
@@ -294,7 +277,7 @@ function onLoaderDone() {
   sessionStorage.setItem(loaderKey, '1')
 }
 
-// ── Refs ──────────────────────────────────────────────────
+// ── Refs ──────────────────────────────────────────────────────────
 const debate        = ref(null)
 const loading       = ref(true)
 const reportFetched = ref(false)
@@ -304,37 +287,37 @@ const selectedAgent = ref(null)
 const hoveredAgent  = ref(null)
 const ttX           = ref(0)
 const ttY           = ref(0)
-const logExpanded   = ref(false)
-const logLines      = ref([])
-const logBody       = ref(null)
-const simError      = ref('')   // ── Tier 1: simulation error message
+const simError      = ref('')
+const agentsCreated = ref(0)       // issue 9: real-time agent count
+const liveStatus    = ref('Ingesting sources...')  // issue 9: status text
+const linkCopied    = ref(false)
 
 const graphSvg  = ref(null)
 const graphArea = ref(null)
 const edgesG    = ref(null)
 const nodesG    = ref(null)
 
-const injectText   = ref('')
-const injecting    = ref(false)
-const injectResult = ref(null)
-const branchTick   = ref(null)
-const branching    = ref(false)
-const branchResult = ref(null)
+let simulation    = null
+let resizeObs     = null
+let pollTimer     = null
+let particleTimer = null
 
-let simulation = null
-let resizeObs  = null
-let pollTimer  = null
-
-// ── Steps ─────────────────────────────────────────────────
+// ── Clean steps — no API endpoints ────────────────────────────────
 const steps = ref([
-  { id:1, title:'Knowledge Ingestion',  desc:'Web search + PDF parsing',            endpoint:'POST /api/simulation/start',      status:'pending' },
-  { id:2, title:'Graph Build',          desc:'NetworkX + PageRank entity graph',     endpoint:'GET  /api/simulation/:id',        status:'pending' },
-  { id:3, title:'Agent Generation',     desc:'Personas with demographics',           endpoint:null,                              status:'pending' },
-  { id:4, title:'Structured Debate',    desc:'form → challenge → revise',            endpoint:'GET  /api/simulation/:id/debate', status:'pending' },
-  { id:5, title:"God's Eye View",       desc:'ReportAgent synthesizes output',       endpoint:'GET  /api/report/:id',            status:'pending' },
+  { id:1, title:'Knowledge Ingestion',  desc:'Reading 400–600 real web sources',    status:'pending' },
+  { id:2, title:'Knowledge Graph',      desc:'Building entity relationship network', status:'pending' },
+  { id:3, title:'Agent Generation',     desc:'Spawning stakeholder personas',        status:'pending' },
+  { id:4, title:'Structured Debate',    desc:'Running opinion dynamics simulation',  status:'pending' },
+  { id:5, title:"God's Eye View",       desc:'Synthesizing final report',            status:'pending' },
 ])
 
-// ── Computed ──────────────────────────────────────────────
+const progressPct = computed(() => {
+  const done = steps.value.filter(s => s.status === 'complete').length
+  const active = steps.value.some(s => s.status === 'active') ? 0.5 : 0
+  return Math.round(((done + active) / steps.value.length) * 100)
+})
+
+// ── Computed ──────────────────────────────────────────────────────
 const allAgents = computed(() => {
   if (!debate.value?.rounds?.length) return []
   return debate.value.rounds[debate.value.rounds.length-1].agents || []
@@ -359,15 +342,7 @@ const forCount     = r => r.agents.filter(a=>a.stance==='for').length
 const againstCount = r => r.agents.filter(a=>a.stance==='against').length
 const neutralCount = r => r.agents.filter(a=>a.stance==='neutral').length
 
-// ── Log ───────────────────────────────────────────────────
-function addLog(msg, type='info') {
-  const t = new Date()
-  const time = `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}:${String(t.getSeconds()).padStart(2,'0')}.${String(t.getMilliseconds()).padStart(3,'0')}`
-  logLines.value.push({ time, msg, type })
-  nextTick(() => { if (logBody.value) logBody.value.scrollTop = logBody.value.scrollHeight })
-}
-
-// ── Steps updater ─────────────────────────────────────────
+// ── Steps updater ─────────────────────────────────────────────────
 function updateSteps() {
   const rounds    = debate.value?.rounds?.length || 0
   const hasAgents = allAgents.value.length > 0
@@ -379,22 +354,31 @@ function updateSteps() {
     steps.value[2].status = 'active'
     steps.value[3].status = 'pending'
     steps.value[4].status = 'pending'
+    liveStatus.value = agentsCreated.value > 0
+      ? `Spawning agents (${agentsCreated.value} ready)...`
+      : 'Building knowledge graph...'
   } else if (hasAgents && rounds === 0) {
     steps.value[2].status = 'complete'
     steps.value[3].status = 'active'
     steps.value[4].status = 'pending'
-  } else if (rounds > 0 && !reportFetched.value) {
+    liveStatus.value = 'Running debate round 1...'
+  } else if (rounds > 0 && rounds < numRounds) {
+    steps.value[2].status = 'complete'
+    steps.value[3].status = 'active'
+    steps.value[4].status = 'pending'
+    liveStatus.value = `Running debate round ${rounds + 1}...`
+  } else if (rounds >= numRounds && !reportFetched.value) {
     steps.value[2].status = 'complete'
     steps.value[3].status = 'complete'
     steps.value[4].status = 'active'
+    liveStatus.value = 'Generating God\'s Eye View...'
   } else if (reportFetched.value) {
-    steps.value[2].status = 'complete'
-    steps.value[3].status = 'complete'
-    steps.value[4].status = 'complete'
+    steps.value.forEach(s => s.status = 'complete')
+    liveStatus.value = 'Complete'
   }
 }
 
-// ── D3 Graph ──────────────────────────────────────────────
+// ── D3 Graph ──────────────────────────────────────────────────────
 const stanceColor = { for:'#3EE8A0', against:'#FF4D6D', neutral:'#7A8BA6' }
 const stanceFill  = { for:'url(#ng-for)', against:'url(#ng-against)', neutral:'url(#ng-neutral)' }
 const NODE_R      = 16
@@ -492,141 +476,178 @@ function buildGraph() {
             .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y)
     nodeSel.attr('transform',d=>`translate(${d.x},${d.y})`)
   })
+
+  startParticleAnimation(nodes, validLinks)
+}
+
+// ── Particle animation ────────────────────────────────────────────
+function startParticleAnimation(nodes, validLinks) {
+  if (particleTimer) clearInterval(particleTimer)
+  if (!validLinks.length || !edgesG.value) return
+
+  d3.select(edgesG.value).select('.particles-layer').remove()
+  const particlesG = d3.select(edgesG.value).append('g').attr('class', 'particles-layer')
+
+  particleTimer = setInterval(() => {
+    if (!edgesG.value || !validLinks.length) return
+    const batch = [...validLinks].sort(() => Math.random() - 0.5).slice(0, 4)
+
+    batch.forEach(link => {
+      const src = link.source
+      const tgt = link.target
+      if (!src || !tgt || src.x == null || tgt.x == null) return
+
+      const fromNode = Math.random() > 0.5 ? src : tgt
+      const toNode   = fromNode === src ? tgt : src
+      const color    = stanceColor[fromNode.stance] || '#7A8BA6'
+
+      const dot = particlesG.append('circle')
+        .attr('r', 4).attr('fill', color)
+        .attr('cx', fromNode.x).attr('cy', fromNode.y)
+        .attr('opacity', 0)
+        .attr('filter', `url(#glow-${fromNode.stance})`)
+
+      dot.transition().duration(120).attr('opacity', 0.9)
+        .transition().duration(850).ease(d3.easeLinear)
+        .attr('cx', toNode.x).attr('cy', toNode.y)
+        .transition().duration(130).attr('opacity', 0).remove()
+    })
+  }, 650)
 }
 
 watch(allAgents, () => nextTick(buildGraph), { deep:true })
 
-// ── API ───────────────────────────────────────────────────
+// ── API + Real-time polling ────────────────────────────────────────
 async function refreshDebate() {
+  if (polling.value) return  // prevent overlapping calls
   polling.value = true
-  addLog(`Polling simulation ${props.id.slice(0,8)}...`)
+
   try {
-    // ── Tier 1: check status first for error_message ──────
+    // Check status — get real-time agent count (issue 9)
     const status = await assembly.getStatus(props.id)
+
     if (status.status === 'failed') {
-      const msg = status.error_message || status.error || 'Simulation failed. Please try again or rephrase your question.'
-      addLog(`Failed: ${msg}`, 'error')
-      simError.value = msg
+      simError.value = status.error_message || status.error || 'Simulation failed. Please try again.'
+      clearInterval(pollTimer)
       polling.value = false
       loading.value = false
-      clearInterval(pollTimer)
       return
     }
-    // ─────────────────────────────────────────────────────
 
-    debate.value = await assembly.getDebate(props.id)
-    addLog(`${debate.value.rounds?.length||0} rounds · ${allAgents.value.length} agents`, 'success')
+    // Update real-time agent count for UI
+    if (status.agents_created > 0) {
+      agentsCreated.value = status.agents_created
+    }
 
-    if (debate.value.rounds?.length > 0 && !reportFetched.value) {
+    // Fetch debate data
+    const debateData = await assembly.getDebate(props.id)
+    const prevRounds = debate.value?.rounds?.length || 0
+    debate.value = debateData
+
+    // New round arrived — rebuild graph
+    if (debateData.rounds?.length > prevRounds) {
+      nextTick(buildGraph)
+    }
+
+    // Try fetching report when debate complete
+    if (debateData.rounds?.length >= numRounds && !reportFetched.value) {
       try {
         await assembly.getReport(props.id)
         reportFetched.value = true
-        addLog("God's Eye View report ready", 'success')
       } catch {}
     }
 
     updateSteps()
-    nextTick(buildGraph)
+
+    // Stop polling when fully complete
+    if (reportFetched.value || debateData.rounds?.length >= numRounds) {
+      clearInterval(pollTimer)
+      pollTimer = null
+    }
+
+    if (allAgents.value.length > 0) {
+      loading.value = false
+      nextTick(buildGraph)
+    }
+
   } catch(e) {
-    addLog(`Error: ${e.message}`, 'error')
+    // Silent fail — just try again next poll
   } finally {
     polling.value = false
-    loading.value = false
   }
 }
 
-async function inject() {
-  injecting.value = true; injectResult.value = null
-  addLog(`Injecting: "${injectText.value.slice(0,40)}..."`)
-  try {
-    injectResult.value = await assembly.injectEvent({ simulation_id:props.id, event:injectText.value })
-    const s = injectResult.value.reactions?.filter(r=>r.shifted).length||0
-    addLog(`Injected at tick ${injectResult.value.injected_at_tick} · ${s} shifted`, 'success')
-    injectText.value = ''
-    setTimeout(refreshDebate, 1500)
-  } catch(e) { addLog(`Inject failed: ${e.message}`, 'error') }
-  finally { injecting.value = false }
-}
-
-async function branch() {
-  branching.value = true; branchResult.value = null
-  addLog(`Branching from tick ${branchTick.value}...`)
-  try {
-    branchResult.value = await assembly.branchSimulation({ simulation_id:props.id, from_tick:branchTick.value })
-    addLog(`Branch: ${branchResult.value.branch_id?.slice(0,10)}`, 'success')
-  } catch(e) { addLog(`Branch failed: ${e.message}`, 'error') }
-  finally { branching.value = false }
+function copyLink() {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    linkCopied.value = true
+    setTimeout(() => linkCopied.value = false, 2500)
+  })
 }
 
 function selectAgent(agent) {
   selectedAgent.value = selectedAgent.value?.id===agent.id ? null : agent
-  if (agent) addLog(`Selected: ${agent.name} (${agent.stance})`)
 }
 
-// ── Lifecycle ─────────────────────────────────────────────
+// ── Lifecycle ─────────────────────────────────────────────────────
 onMounted(async () => {
-  addLog('Simulation view initialised.')
   steps.value[0].status = 'active'
+  liveStatus.value = 'Ingesting sources...'
+
+  // Initial fetch
   await refreshDebate()
+
   nextTick(() => {
     buildGraph()
     resizeObs = new ResizeObserver(() => buildGraph())
     if (graphArea.value) resizeObs.observe(graphArea.value)
   })
+
+  // Issue 9: poll every 2.5s for real-time updates
   pollTimer = setInterval(() => {
-    if (!simError.value && (!allAgents.value.length || (debate.value?.rounds?.length||0) < 3)) {
-      refreshDebate()
-    }
-  }, 8000)
+    if (!simError.value) refreshDebate()
+  }, 2500)
 })
 
 onUnmounted(() => {
-  if (simulation) simulation.stop()
-  if (resizeObs)  resizeObs.disconnect()
-  clearInterval(pollTimer)
+  if (simulation)   simulation.stop()
+  if (resizeObs)    resizeObs.disconnect()
+  if (pollTimer)    clearInterval(pollTimer)
+  if (particleTimer) clearInterval(particleTimer)
 })
 </script>
 
 <style scoped>
-.sim-layout { display:flex; flex-direction:column; height:calc(100vh - 56px); overflow:hidden; }
+.sim-layout { display:flex; flex-direction:column; height:calc(100vh - 52px); overflow:hidden; }
 
+/* Top bar */
 .sim-topbar { display:flex; align-items:center; gap:16px; padding:0 20px; height:52px; flex-shrink:0; border-bottom:1px solid var(--border); background:var(--bg-2); }
 .topbar-left  { flex:1; display:flex; align-items:center; gap:12px; min-width:0; }
-.topbar-right { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.topbar-right { display:flex; align-items:center; gap:10px; flex-shrink:0; }
 .topbar-badges { display:flex; align-items:center; gap:8px; flex-shrink:0; }
 .sim-topic-label { font-weight:500; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .topbar-tabs { display:flex; gap:3px; background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:3px; }
 .tab-btn { font-family:var(--mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:5px 14px; border-radius:4px; border:none; background:transparent; color:var(--text-muted); cursor:pointer; transition:all var(--transition); }
 .tab-btn.active { background:var(--surface-2); color:var(--text); border:1px solid var(--border-hi); }
 
-.sim-body { flex:1; display:grid; grid-template-columns:1fr 256px; overflow:hidden; position:relative; }
+/* Real-time status */
+.live-status { display:flex; align-items:center; gap:6px; font-size:10px; color:var(--text-muted); letter-spacing:0.04em; }
+
+/* Main body */
+.sim-body { flex:1; display:grid; grid-template-columns:1fr 240px; overflow:hidden; position:relative; }
 .sim-main { display:flex; overflow:hidden; }
 
-/* ── Tier 1: error banner ── */
-.sim-error-banner {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: var(--surface-2);
-  border: 1px solid rgba(255,77,109,0.3);
-  border-radius: var(--radius-lg);
-  padding: 20px 24px;
-  max-width: 480px;
-  width: 90%;
-  z-index: 50;
-}
-.sim-error-icon { font-size: 24px; color: var(--against); flex-shrink: 0; }
-.sim-error-title { font-size: 12px; color: var(--against); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
-.sim-error-msg { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+/* Error */
+.sim-error-banner { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); display:flex; align-items:center; gap:16px; background:var(--surface-2); border:1px solid rgba(255,77,109,0.3); border-radius:var(--radius-lg); padding:20px 24px; max-width:480px; width:90%; z-index:50; }
+.sim-error-icon { font-size:24px; color:var(--against); flex-shrink:0; }
+.sim-error-title { font-size:12px; color:var(--against); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:4px; }
+.sim-error-msg { font-size:12px; color:var(--text-muted); line-height:1.5; }
 
+/* Panels */
 .panel-wrap { display:flex; flex-direction:column; flex:1; overflow:hidden; border-right:1px solid var(--border); }
 .panel-wrap.half { flex:1; }
 .panel-header { display:flex; justify-content:space-between; align-items:center; padding:10px 16px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border); flex-shrink:0; }
 
+/* Graph */
 .graph-area { flex:1; overflow:hidden; position:relative; background:var(--bg); }
 .graph-svg  { width:100%; height:100%; display:block; }
 .graph-empty { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:var(--text-dim); font-size:11px; letter-spacing:.08em; text-transform:uppercase; pointer-events:none; }
@@ -642,14 +663,17 @@ onUnmounted(() => {
 .tt-name   { font-weight:600; font-size:13px; margin-bottom:6px; }
 .tt-opinion { font-size:11px; color:var(--text-muted); line-height:1.5; }
 
+/* Debate */
 .debate-scroll { flex:1; overflow-y:auto; padding:16px; }
-.debate-empty  { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; height:200px; color:var(--text-muted); font-size:12px; }
+.debate-empty  { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; height:200px; color:var(--text-muted); font-size:12px; }
+.agents-progress { background:rgba(62,232,160,0.1); border:1px solid rgba(62,232,160,0.2); border-radius:100px; padding:4px 12px; font-size:10px; color:var(--for); }
 .round-block   { margin-bottom:24px; }
 .round-divider { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
 .round-line    { flex:1; height:1px; background:var(--border); }
 .round-label   { font-size:13px; color:var(--text-muted); white-space:nowrap; }
 .stance-bar    { display:flex; height:3px; border-radius:2px; overflow:hidden; margin-bottom:12px; }
 .sb-seg        { transition:width .5s ease; }
+.round-waiting { display:flex; align-items:center; gap:8px; padding:12px 0; font-size:11px; color:var(--text-dim); }
 .statement { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:10px 12px; margin-bottom:6px; cursor:pointer; transition:all var(--transition); }
 .statement:hover { border-color:var(--border-hi); background:var(--surface-2); }
 .stmt-for     { border-left:2px solid rgba(62,232,160,.4); }
@@ -663,40 +687,36 @@ onUnmounted(() => {
 .stmt-name { font-size:11px; font-weight:500; }
 .stmt-text { font-size:12px; color:var(--text-muted); line-height:1.6; }
 
+/* Workbench — reworked clean design */
 .workbench { display:flex; flex-direction:column; overflow-y:auto; background:var(--bg-2); border-left:1px solid var(--border); }
-.wb-header { padding:14px 16px; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border); flex-shrink:0; }
-.steps-list { padding:16px; }
-.step-item  { display:flex; gap:10px; position:relative; padding-bottom:14px; }
-.step-connector { position:absolute; left:9px; top:-14px; width:1px; height:14px; background:var(--border); }
-.step-dot { width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:9px; flex-shrink:0; border:1px solid var(--border); background:var(--surface); color:var(--text-muted); transition:all var(--transition); }
-.step-item.complete .step-dot { background:rgba(62,232,160,.15); border-color:var(--for); color:var(--for); }
-.step-item.active   .step-dot { border-color:var(--accent); box-shadow:0 0 8px rgba(200,255,87,.3); }
-.step-body { flex:1; min-width:0; }
-.step-title { font-size:12px; font-weight:500; margin-bottom:2px; color:var(--text-muted); }
-.step-desc  { font-size:10px; color:var(--text-dim); line-height:1.4; }
-.step-ep    { font-family:var(--mono); font-size:9px; color:var(--accent); margin-top:3px; opacity:.55; }
-.step-item.complete .step-title { color:var(--text); }
-.step-item.active   .step-title { color:var(--accent); }
+.wb-header { padding:14px 16px; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border); flex-shrink:0; font-family:var(--mono); }
+
+/* Clean progress steps */
+.progress-steps { padding:16px; display:flex; flex-direction:column; gap:10px; }
+.progress-step { display:flex; align-items:flex-start; gap:10px; }
+.ps-indicator { width:18px; height:18px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.ps-check { width:16px; height:16px; border-radius:50%; background:rgba(62,232,160,.15); border:1px solid var(--for); color:var(--for); font-size:9px; display:flex; align-items:center; justify-content:center; }
+.ps-dot { width:6px; height:6px; border-radius:50%; background:var(--border); display:block; margin:auto; }
+.progress-step.active .ps-dot { background:var(--accent); box-shadow:0 0 6px rgba(200,255,87,.4); }
+.ps-body { flex:1; }
+.ps-title { font-size:11px; font-weight:500; color:var(--text-muted); margin-bottom:1px; transition:color var(--transition); }
+.ps-desc  { font-size:9px; color:var(--text-dim); line-height:1.4; }
+.progress-step.complete .ps-title { color:var(--text); }
+.progress-step.active   .ps-title { color:var(--accent); }
+
+/* Progress bar */
+.wb-progress-wrap { padding:0 16px 12px; display:flex; flex-direction:column; }
+.wb-progress-bar { height:3px; background:var(--surface-2); border-radius:2px; overflow:hidden; }
+.wb-progress-fill { height:100%; background:linear-gradient(90deg, var(--accent), rgba(200,255,87,0.6)); border-radius:2px; transition:width 0.8s ease; }
+
 .wb-sec       { padding:14px 16px; border-top:1px solid var(--border); }
-.wb-sec-label { font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px; font-family:var(--mono); }
-.inject-result { margin-top:8px; }
-.inject-row    { display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px solid var(--border); }
+.wb-sec-label { font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--text-muted); margin-bottom:10px; font-family:var(--mono); }
 .dist-row   { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
 .dist-track { flex:1; height:3px; background:var(--surface-2); border-radius:2px; overflow:hidden; }
 .dist-fill  { height:100%; border-radius:2px; transition:width .5s ease; }
 
-.sys-log { border-top:1px solid var(--border); background:var(--bg); flex-shrink:0; height:36px; overflow:hidden; transition:height var(--transition); }
-.sys-log.expanded { height:150px; }
-.log-bar  { display:flex; justify-content:space-between; align-items:center; padding:0 16px; height:36px; cursor:pointer; }
-.log-bar:hover { background:var(--surface); }
-.log-body { height:114px; overflow-y:auto; padding:6px 16px; }
-.log-line { display:flex; gap:12px; padding:2px 0; }
-.log-time { font-size:10px; color:var(--text-dim); flex-shrink:0; }
-.log-msg  { font-size:10px; color:var(--text-muted); }
-.log-msg.success { color:var(--for); }
-.log-msg.error   { color:var(--against); }
-
-.agent-panel { position:fixed; bottom:50px; right:270px; width:270px; background:var(--surface-2); border:1px solid var(--border-hi); border-radius:12px; padding:16px; z-index:200; box-shadow:0 16px 48px rgba(0,0,0,.6); }
+/* Agent detail */
+.agent-panel { position:fixed; bottom:20px; right:256px; width:270px; background:var(--surface-2); border:1px solid var(--border-hi); border-radius:12px; padding:16px; z-index:200; box-shadow:0 16px 48px rgba(0,0,0,.6); }
 .ap-head { display:flex; align-items:center; gap:10px; }
 .ap-avatar { width:38px; height:38px; border-radius:50%; font-family:var(--display); font-size:20px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
 .ap-name  { font-size:14px; font-weight:600; }
@@ -717,13 +737,11 @@ onUnmounted(() => {
   .topbar-tabs { order:2; width:100%; justify-content:center; }
   .tab-btn { flex:1; text-align:center; padding:6px 4px; font-size:9px; }
   .topbar-right { order:1; margin-left:auto; }
-  .topbar-right .btn-ghost { display:none; }
+  .live-status { display:none; }
   .sim-main { flex-direction:column; }
   .graph-area { height:300px; min-height:300px; }
   .debate-scroll { padding:10px; max-height:60vh; }
   .agent-panel { position:fixed; bottom:0; left:0; right:0; width:100%; border-radius:16px 16px 0 0; padding:20px 16px 32px; z-index:300; }
-  .sys-log { height:32px; }
-  .sys-log.expanded { height:120px; }
 }
 @media (max-width: 480px) {
   .graph-legend { gap:8px; padding:5px 10px; font-size:9px; }
