@@ -201,8 +201,8 @@
           </div>
           <div class="form-group">
             <label class="form-label mono">Rounds <span class="accent mono">{{ form.num_rounds }}</span></label>
-            <input v-model.number="form.num_rounds" type="range" min="1" max="10" step="1" class="range" :disabled="loading"/>
-            <div class="range-labels mono"><span>1</span><span>10</span></div>
+            <input v-model.number="form.num_rounds" type="range" min="3" max="10" step="1" class="range" :disabled="loading"/>
+            <div class="range-labels mono"><span>3</span><span>10</span></div>
           </div>
         </div>
 
