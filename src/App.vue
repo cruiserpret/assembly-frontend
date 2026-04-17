@@ -55,13 +55,6 @@
             >
               Switch to Market Mode →
             </router-link>
-            <router-link
-              v-else
-              to="/"
-              class="nav-dtc-link mono"
-            >
-              Switch to Debate Mode →
-            </router-link>
           </template>
 
         </div>
