@@ -188,7 +188,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { assembly } from '../api/assembly.js'
+import { assembly } from '../api/assembly_DTC_MOCK.js'
 
 const props = defineProps({ id: String })
 
