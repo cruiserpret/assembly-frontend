@@ -396,7 +396,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { assembly } from '../api/assembly_DTC_MOCK.js'
+import { assemblyDTC as assembly } from '../api/assembly.js'
 
 const router  = useRouter()
 const loading = ref(false)
@@ -590,11 +590,15 @@ async function launch() {
 
   try {
     const res = await assembly.startSimulation({
-      topic:      buildDTCTopic(),
-      context:    buildDTCContext(),
-      num_agents: form.value.num_agents,
-      num_rounds: 3, // DTC always 3 structured rounds
-      uploads:    [],
+      product_name:        form.value.product_name,
+      product_description: form.value.product_description,
+      price:               parseFloat(form.value.price),
+      category:            form.value.category || 'general',
+      demographic:         buildDTCContext(),
+      competitors:         form.value.competitors
+                             .filter(c => c.name && c.name.trim())
+                             .map(c => ({ name: c.name.trim(), asin: c.asin || '' })),
+      num_agents:          form.value.num_agents,
     })
 
     router.push(

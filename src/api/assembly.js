@@ -76,3 +76,21 @@ export const assembly = {
         return request(`/agent/${ agentId }/memory`)
     },
 }
+// ── Tier 2 DTC routes ──────────────────────────────────────────
+export const assemblyDTC = {
+    async startSimulation({ product_name, product_description, price, category, demographic, competitors, num_agents }) {
+        return request('/dtc/simulation/start', {
+            method: 'POST',
+            body: JSON.stringify({ product_name, product_description, price, category, demographic, competitors, num_agents }),
+        })
+    },
+    async getStatus(simulationId) {
+        return request(`/dtc/simulation/${simulationId}/status`)
+    },
+    async getDebate(simulationId) {
+        return request(`/dtc/simulation/${simulationId}/debate`)
+    },
+    async getReport(simulationId) {
+        return request(`/dtc/simulation/${simulationId}/report`)
+    },
+}

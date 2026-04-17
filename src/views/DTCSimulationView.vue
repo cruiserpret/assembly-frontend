@@ -241,7 +241,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { assembly } from '../api/assembly_DTC_MOCK.js'
+import { assemblyDTC as assembly } from '../api/assembly.js'
 
 const props  = defineProps({ id: String })
 const route  = useRoute()
