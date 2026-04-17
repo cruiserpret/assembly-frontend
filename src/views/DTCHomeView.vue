@@ -513,7 +513,7 @@ const DELIVERABLES = [
 const isFormValid = computed(() => {
   return (
     form.value.product_name.trim().length > 0 &&
-    form.value.product_description.trim().length > 10 &&
+    form.value.product_description.trim().length > 0 &&
     form.value.price > 0
   )
 })
@@ -583,7 +583,7 @@ function buildDTCContext() {
 
 // ── Launch ──────────────────────────────────────────────────────
 async function launch() {
-  if (!isFormValid.value || loading.value) return
+  if (loading.value) return
 
   loading.value = true
   error.value = ''
