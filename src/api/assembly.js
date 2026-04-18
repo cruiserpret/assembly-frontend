@@ -77,6 +77,10 @@ export const assembly = {
     },
 }
 // ── Tier 2 DTC routes ──────────────────────────────────────────
+// GODMODE: Tier 2 DTC client with report cache
+const _dtcReportCache = new Map()  // sim_id → { data, timestamp }
+const _DTC_CACHE_TTL = 10 * 60 * 1000  // 10 min
+
 export const assemblyDTC = {
     async startSimulation({ product_name, product_description, price, category, demographic, competitors, num_agents }) {
         return request('/dtc/simulation/start', {
@@ -85,12 +89,26 @@ export const assemblyDTC = {
         })
     },
     async getStatus(simulationId) {
-        return request(`/dtc/simulation/${simulationId}/status`)
+        return request(`/dtc/simulation/${ simulationId }/status`)
     },
     async getDebate(simulationId) {
-        return request(`/dtc/simulation/${simulationId}/debate`)
+        return request(`/dtc/simulation/${ simulationId }/debate`)
     },
     async getReport(simulationId) {
-        return request(`/dtc/simulation/${simulationId}/report`)
+        // Check cache first
+        const cached = _dtcReportCache.get(simulationId)
+        if (cached && (Date.now() - cached.timestamp) < _DTC_CACHE_TTL) {
+            return cached.data
+        }
+        // Fetch and cache
+        const data = await request(`/dtc/simulation/${ simulationId }/report`)
+        if (data && !data.error) {
+            _dtcReportCache.set(simulationId, { data, timestamp: Date.now() })
+        }
+        return data
+    },
+    clearReportCache(simulationId) {
+        if (simulationId) _dtcReportCache.delete(simulationId)
+        else _dtcReportCache.clear()
     },
 }

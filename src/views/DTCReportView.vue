@@ -306,6 +306,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+
+// GODMODE: Module-level cache — survives component re-mount on navigation
+const _reportCache = new Map()  // simulation_id → report data
+const _CACHE_TTL_MS = 10 * 60 * 1000  // 10 minutes
 import { useRoute } from 'vue-router'
 import { assemblyDTC as assembly } from '../api/assembly.js'
 
@@ -315,12 +319,43 @@ const report = ref(null)
 
 // ── Load report ────────────────────────────────────────────────
 onMounted(async () => {
-  try {
-    const data = await assembly.getReport(props.id)
-    report.value = data
-  } catch (e) {
-    console.error('Report load error:', e)
+  // GODMODE Fix 1: Use cached report if available (prevents flash + infinite loading)
+  const cached = _reportCache.get(props.id)
+  if (cached && (Date.now() - cached.timestamp) < _CACHE_TTL_MS) {
+    report.value = cached.data
+    loading.value = false
+    return
   }
+
+  loading.value = true
+  let attempts = 0
+  const MAX_ATTEMPTS = 30  // 30 × 2s = 60s max wait
+
+  // GODMODE Fix 2: Retry loop — waits for backend 'complete' before giving up
+  while (attempts < MAX_ATTEMPTS) {
+    try {
+      const data = await assembly.getReport(props.id)
+      if (data && Object.keys(data).length > 0) {
+        report.value = data
+        _reportCache.set(props.id, { data, timestamp: Date.now() })
+        loading.value = false
+        return
+      }
+    } catch (err) {
+      // 404 = not ready yet, keep polling
+      if (!err.message?.includes('404')) {
+        console.error('Report load error:', err)
+        loading.value = false
+        return
+      }
+    }
+    attempts++
+    await new Promise(r => setTimeout(r, 2000))
+  }
+
+  // Max attempts reached
+  loading.value = false
+  console.warn('Report fetch timed out after 60s')
 })
 
 // ── Computed from report ────────────────────────────────────────

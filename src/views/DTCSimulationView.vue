@@ -354,9 +354,12 @@ async function refreshDebate() {
 
   try {
     let status = null
+    let statusOk = false
 
     try {
       status = await assembly.getStatus(props.id)
+      statusOk = true
+
       if (status?.status === 'failed') {
         simError.value = status.error_message || 'Market simulation failed. Please try again.'
         clearInterval(pollTimer)
@@ -366,32 +369,42 @@ async function refreshDebate() {
       }
       if (status?.agents_created > 0) {
         agentsCreated.value = status.agents_created
-        // Advance loading messages based on agent creation
         if (currentLoadingMsg.value < 2) currentLoadingMsg.value = 2
       }
-    } catch { /* status endpoint may not exist yet */ }
-
-    const debateData = await assembly.getDebate(props.id)
-    if (!debateData) return
-
-    debate.value = debateData
-
-    const roundCount = debateData.rounds?.length || 0
-    if (roundCount >= 1) currentLoadingMsg.value = Math.min(2 + roundCount, loadingMessages.length - 1)
-
-    updateSteps()
-
-    // Fetch report when done
-    const debateComplete = status?.status === 'complete' || roundCount >= 1
-    if (debateComplete && !reportFetched.value) {
-      try {
-        await assembly.getReport(props.id)
-        reportFetched.value = true
-        currentLoadingMsg.value = loadingMessages.length - 1
-        updateSteps()
-      } catch { /* not ready yet */ }
+    } catch {
+      // Status endpoint not ready — keep polling
+      statusOk = false
     }
 
+    // Fetch debate data to show rounds as they complete
+    try {
+      const debateData = await assembly.getDebate(props.id)
+      if (debateData) {
+        debate.value = debateData
+        const roundCount = debateData.rounds?.length || 0
+        if (roundCount >= 1) {
+          currentLoadingMsg.value = Math.min(2 + roundCount, loadingMessages.length - 1)
+        }
+        updateSteps()
+      }
+    } catch { /* debate not ready, keep polling */ }
+
+    // GODMODE FIX: Only fetch report when backend explicitly says status === 'complete'
+    // DO NOT use roundCount >= 1 as a proxy for completion
+    if (statusOk && status?.status === 'complete' && !reportFetched.value) {
+      try {
+        const reportData = await assembly.getReport(props.id)
+        if (reportData && Object.keys(reportData).length > 0 && !reportData.error) {
+          reportFetched.value = true
+          currentLoadingMsg.value = loadingMessages.length - 1
+          updateSteps()
+        }
+      } catch {
+        // Report not ready yet — keep polling, don't mark fetched
+      }
+    }
+
+    // Stop polling only after report is actually fetched
     if (reportFetched.value) {
       clearInterval(pollTimer)
       pollTimer = null
@@ -399,7 +412,7 @@ async function refreshDebate() {
       steps.value.forEach(s => { if (s.status !== 'complete') s.status = 'complete' })
     }
 
-  } catch { /* keep polling */ } finally {
+  } catch { /* network blip, keep polling */ } finally {
     isRefreshing.value = false
   }
 }
