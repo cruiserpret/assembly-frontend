@@ -391,18 +391,28 @@ async function refreshDebate() {
 
     // GODMODE FIX: Only fetch report when backend explicitly says status === 'complete'
     // DO NOT use roundCount >= 1 as a proxy for completion
-    if (statusOk && status?.status === 'complete' && !reportFetched.value) {
-      try {
-        const reportData = await assembly.getReport(props.id)
-        if (reportData && Object.keys(reportData).length > 0 && !reportData.error) {
-          reportFetched.value = true
-          currentLoadingMsg.value = loadingMessages.length - 1
-          updateSteps()
-        }
-      } catch {
-        // Report not ready yet — keep polling, don't mark fetched
-      }
+    // GODMODE 3.1: Only mark complete when BOTH report AND full debate are present
+if (statusOk && status?.status === 'complete' && !reportFetched.value) {
+  try {
+    const reportData = await assembly.getReport(props.id)
+    const fullDebate = await assembly.getDebate(props.id)
+
+    const hasFullDebate = fullDebate?.rounds?.length === 3 &&
+                          fullDebate.rounds[2]?.agents?.length > 0
+
+    if (reportData &&
+        Object.keys(reportData).length > 0 &&
+        !reportData.error &&
+        hasFullDebate) {
+      debate.value = fullDebate  // ensure latest debate is stored
+      reportFetched.value = true
+      currentLoadingMsg.value = loadingMessages.length - 1
+      updateSteps()
     }
+  } catch {
+    // Not ready, keep polling
+  }
+}
 
     // Stop polling only after report is actually fetched
     if (reportFetched.value) {
@@ -418,16 +428,42 @@ async function refreshDebate() {
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────
-onMounted(() => {
-  refreshDebate()
-  pollTimer    = setInterval(refreshDebate, 2500)
-
-  // Advance loading messages slowly while waiting
-  loadingTimer = setInterval(() => {
-    if (!reportFetched.value && currentLoadingMsg.value < 2) {
-      currentLoadingMsg.value++
+onMounted(async () => {
+  // GODMODE 3.1 FIX: Always fetch latest debate data on mount,
+  // even if we already have cached data from a previous visit
+  try {
+    const freshDebate = await assembly.getDebate(props.id)
+    if (freshDebate?.rounds?.length > 0) {
+      debate.value = freshDebate
+      const lastRound = freshDebate.rounds[freshDebate.rounds.length - 1]
+      if (lastRound?.agents?.length > 0) {
+        agentsCreated.value = lastRound.agents.length
+      }
     }
-  }, 8000)
+
+    const freshStatus = await assembly.getStatus(props.id)
+    if (freshStatus?.status === 'complete') {
+      reportFetched.value = true
+      isLive.value = false
+      currentLoadingMsg.value = loadingMessages.length - 1
+      updateSteps()
+      steps.value.forEach(s => s.status = 'complete')
+    }
+  } catch (e) {
+    // If fetch fails, continue with normal polling flow
+  }
+
+  // Continue with normal polling (will refresh if not complete)
+  if (!reportFetched.value) {
+    refreshDebate()
+    pollTimer = setInterval(refreshDebate, 2500)
+
+    loadingTimer = setInterval(() => {
+      if (!reportFetched.value && currentLoadingMsg.value < 2) {
+        currentLoadingMsg.value++
+      }
+    }, 8000)
+  }
 })
 
 onUnmounted(() => {
