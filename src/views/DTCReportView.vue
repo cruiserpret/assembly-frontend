@@ -20,6 +20,13 @@
         </div>
         <div class="verdict-conf mono">{{ report.verdict?.confidence_pct || 0 }}% confidence</div>
       </div>
+      <button
+        class="pdf-download-btn"
+        @click="downloadPDF"
+        :disabled="downloading"
+      >
+        {{ downloading ? 'Generating PDF...' : '⬇ Download PDF' }}
+      </button>
     </div>
 
     <!-- ── EXECUTIVE SUMMARY ── -->
@@ -308,11 +315,36 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { assemblyDTC as assembly } from '../api/assembly.js'
+import html2pdf from 'html2pdf.js'
 
 const props = defineProps({ id: String })
 const route = useRoute()
 
 const report  = ref(null)
+const downloading = ref(false)
+
+const downloadPDF = async () => {
+  downloading.value = true
+  try {
+    const element = document.querySelector('.dtc-report')
+    const productName = report.value?.topic?.replace('[DTC] ', '').split(' at ')[0] || 'Assembly-Report'
+    const cleanName = productName.replace(/[^a-z0-9]/gi, '-').substring(0, 40)
+    const opt = {
+      margin:       [10, 10, 10, 10],
+      filename:     `Assembly-Report-${cleanName}-${new Date().toISOString().split('T')[0]}.pdf`,
+      image:        { type: 'jpeg', quality: 0.95 },
+      html2canvas:  { scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff' },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+    }
+    await html2pdf().set(opt).from(element).save()
+  } catch (err) {
+    console.error('PDF download failed:', err)
+    alert('PDF download failed. Check console for details.')
+  } finally {
+    downloading.value = false
+  }
+}
 const loading = ref(false)
 const error   = ref('')
 
@@ -583,6 +615,36 @@ function stanceLabel(stance) {
   font-size: 11px;
   color: var(--text-dim);
   letter-spacing: 0.04em;
+}
+
+/* ── PDF Download Button ── */
+.pdf-download-btn {
+  margin-top: 16px;
+  padding: 10px 20px;
+  background: var(--accent, #c8ff57);
+  color: #000;
+  border: 1px solid var(--accent, #c8ff57);
+  border-radius: 4px;
+  font-family: var(--mono, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+.pdf-download-btn:hover:not(:disabled) {
+  background: transparent;
+  color: var(--accent, #c8ff57);
+}
+.pdf-download-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media print {
+  .pdf-download-btn { display: none !important; }
 }
 
 /* ── Report sections ── */
