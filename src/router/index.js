@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 const DTCHomeView       = () => import('../views/DTCHomeView.vue')
 const DTCSimulationView = () => import('../views/DTCSimulationView.vue')
 const DTCReportView     = () => import('../views/DTCReportView.vue')
+const DemoV3View        = () => import('../views/DemoV3View.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -11,6 +12,7 @@ const router = createRouter({
     { path: '/dtc',                   name: 'dtc-home',       component: DTCHomeView },
     { path: '/dtc/simulation/:id',    name: 'dtc-simulation', component: DTCSimulationView, props: true },
     { path: '/dtc/report/:id',        name: 'dtc-report',     component: DTCReportView,     props: true },
+    { path: '/demo/v3',               name: 'demo-v3',        component: DemoV3View },
     { path: '/:pathMatch(.*)*',       redirect: '/dtc' },
   ],
   scrollBehavior() { return { top: 0 } },
